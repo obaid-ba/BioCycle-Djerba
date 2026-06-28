@@ -16,6 +16,7 @@ from app.features.bins.schemas import (
     SmartBinUpdate,
 )
 from app.features.hotels.repository import HotelRepository
+from app.realtime.events import build_reading_event
 from app.shared.exceptions import ConflictError, NotFoundError, ValidationError
 from app.shared.schemas import Page, PaginationParams
 
@@ -112,19 +113,11 @@ class BinService:
             raise NotFoundError("No readings recorded for this bin yet")
         return reading
 
-    async def ingest_reading(self, bin_id: uuid.UUID, data: SensorReadingCreate) -> SensorReading:
-        """Persist a reading and refresh the bin's cached telemetry.
-
-        Shared by the HTTP ingest endpoint and (Phase 4) the MQTT consumer, so
-        it intentionally takes no user — ingestion is a system/device action.
-        """
-        bin_ = await self.bins.get(bin_id)
-        if bin_ is None:
-            raise NotFoundError("Smart bin not found")
-
+    async def _persist_reading(self, bin_: SmartBin, data: SensorReadingCreate) -> SensorReading:
+        """Insert a reading and refresh the bin's denormalized telemetry."""
         recorded_at = data.recorded_at or datetime.now(UTC)
         reading = SensorReading(
-            bin_id=bin_id,
+            bin_id=bin_.id,
             fill_level=data.fill_level,
             weight_kg=data.weight_kg,
             temperature_c=data.temperature_c,
@@ -145,3 +138,30 @@ class BinService:
         await self.db.refresh(reading)
         await self.db.refresh(bin_)
         return reading
+
+    async def ingest(
+        self,
+        *,
+        data: SensorReadingCreate,
+        bin_id: uuid.UUID | None = None,
+        code: str | None = None,
+    ) -> tuple[SensorReading, dict]:
+        """Persist telemetry and return (reading, broadcast event).
+
+        Accepts either a bin id (HTTP route) or a device code (MQTT). Takes no
+        user — ingestion is a system/device action. The caller decides whether
+        to broadcast the returned event, keeping this service free of any
+        WebSocket dependency.
+        """
+        if bin_id is not None:
+            bin_ = await self.bins.get(bin_id)
+        elif code is not None:
+            bin_ = await self.bins.get_by_code(code)
+        else:
+            raise ValueError("ingest() requires either bin_id or code")
+
+        if bin_ is None:
+            raise NotFoundError("Smart bin not found")
+
+        reading = await self._persist_reading(bin_, data)
+        return reading, build_reading_event(bin_, reading)

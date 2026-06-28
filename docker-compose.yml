@@ -17,6 +17,15 @@ services:
       timeout: 5s
       retries: 5
 
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: biocycle-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./infra/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
   backend:
     build:
       context: ./backend
@@ -27,9 +36,12 @@ services:
       - ./backend/.env
     environment:
       POSTGRES_HOST: db
+      MQTT_HOST: mqtt
     depends_on:
       db:
         condition: service_healthy
+      mqtt:
+        condition: service_started
     ports:
       - "8000:8000"
     volumes:

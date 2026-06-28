@@ -47,6 +47,13 @@ def session_factory(engine) -> async_sessionmaker[AsyncSession]:
 
 
 @pytest.fixture
+async def db_session(session_factory) -> AsyncGenerator[AsyncSession, None]:
+    """A standalone session for testing services/repositories directly."""
+    async with session_factory() as session:
+        yield session
+
+
+@pytest.fixture
 async def client(session_factory) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
         async with session_factory() as session:

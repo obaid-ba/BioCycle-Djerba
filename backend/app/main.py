@@ -5,6 +5,7 @@ middleware, exception handlers, and mounting the aggregated API router. All
 business logic lives in feature slices.
 """
 
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -13,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
+from app.mqtt.consumer import MQTTConsumer
 from app.shared.exception_handlers import register_exception_handlers
 
 configure_logging()
@@ -22,7 +24,16 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     logger.info("Starting %s (%s)", settings.PROJECT_NAME, settings.ENVIRONMENT)
+
+    consumer: MQTTConsumer | None = None
+    if settings.MQTT_ENABLED:
+        consumer = MQTTConsumer(asyncio.get_running_loop())
+        consumer.start()
+
     yield
+
+    if consumer is not None:
+        consumer.stop()
     logger.info("Shutting down %s", settings.PROJECT_NAME)
 
 

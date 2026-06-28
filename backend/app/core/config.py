@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_NAME: str = "BioCycle Admin"
 
     # ---- MQTT (Phase 4) ----
+    MQTT_ENABLED: bool = True
     MQTT_HOST: str = "localhost"
     MQTT_PORT: int = 1883
     MQTT_USERNAME: str = ""

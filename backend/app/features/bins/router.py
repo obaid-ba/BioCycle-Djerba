@@ -18,6 +18,7 @@ from app.features.bins.schemas import (
     SmartBinUpdate,
 )
 from app.features.bins.service import BinService
+from app.realtime.manager import manager
 from app.shared.schemas import Page, PaginationParams, pagination_params
 
 router = APIRouter()
@@ -132,5 +133,6 @@ async def latest_reading(
 async def ingest_reading(
     bin_id: uuid.UUID, payload: SensorReadingCreate, db: DbSession
 ) -> SensorReadingRead:
-    reading = await BinService(db).ingest_reading(bin_id, payload)
+    reading, event = await BinService(db).ingest(bin_id=bin_id, data=payload)
+    await manager.broadcast(event)
     return SensorReadingRead.model_validate(reading)
