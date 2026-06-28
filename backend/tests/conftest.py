@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.features.auth.models import User, UserRole
+from app.features.hotels.models import Hotel, HotelStatus
 from app.main import app
 from app.shared.models import Base
 
@@ -70,3 +71,50 @@ def make_user(db_session: AsyncSession):
         return user
 
     return _make_user
+
+
+@pytest.fixture
+def login(client: AsyncClient):
+    """Log in an existing user and return ready-to-use auth headers."""
+
+    async def _login(email: str, password: str = "password123") -> dict[str, str]:
+        response = await client.post("/api/auth/login", json={"email": email, "password": password})
+        assert response.status_code == 200, response.text
+        return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+    return _login
+
+
+@pytest.fixture
+def auth_headers(make_user, login):
+    """Create a user with a given role and return its auth headers."""
+
+    async def _auth_headers(
+        role: UserRole = UserRole.ADMIN, email: str | None = None
+    ) -> dict[str, str]:
+        email = email or f"{role.value}@test.io"
+        await make_user(email=email, password="password123", role=role)
+        return await login(email)
+
+    return _auth_headers
+
+
+@pytest.fixture
+def make_hotel(db_session: AsyncSession):
+    """Factory fixture that inserts a hotel into the test DB."""
+
+    async def _make_hotel(
+        *,
+        name: str = "Test Hotel",
+        city: str = "Djerba",
+        status: HotelStatus = HotelStatus.ACTIVE,
+        manager_id=None,
+        **kwargs,
+    ) -> Hotel:
+        hotel = Hotel(name=name, city=city, status=status, manager_id=manager_id, **kwargs)
+        db_session.add(hotel)
+        await db_session.commit()
+        await db_session.refresh(hotel)
+        return hotel
+
+    return _make_hotel
