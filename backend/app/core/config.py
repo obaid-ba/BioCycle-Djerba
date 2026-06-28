@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
+    # ---- Initial admin (used by scripts/seed_admin.py) ----
+    FIRST_SUPERUSER_EMAIL: str = "admin@biocycle.local"
+    FIRST_SUPERUSER_PASSWORD: str = "changeme123"
+    FIRST_SUPERUSER_NAME: str = "BioCycle Admin"
+
     # ---- MQTT (Phase 4) ----
     MQTT_HOST: str = "localhost"
     MQTT_PORT: int = 1883

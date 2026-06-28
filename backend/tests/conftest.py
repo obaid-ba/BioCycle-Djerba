@@ -12,6 +12,8 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.database import get_db
+from app.core.security import hash_password
+from app.features.auth.models import User, UserRole
 from app.main import app
 from app.shared.models import Base
 
@@ -41,3 +43,30 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def make_user(db_session: AsyncSession):
+    """Factory fixture that inserts a user into the test DB."""
+
+    async def _make_user(
+        *,
+        email: str = "user@test.io",
+        password: str = "password123",
+        full_name: str = "Test User",
+        role: UserRole = UserRole.HOTEL_MANAGER,
+        is_active: bool = True,
+    ) -> User:
+        user = User(
+            email=email,
+            full_name=full_name,
+            role=role,
+            hashed_password=hash_password(password),
+            is_active=is_active,
+        )
+        db_session.add(user)
+        await db_session.commit()
+        await db_session.refresh(user)
+        return user
+
+    return _make_user
