@@ -6,6 +6,7 @@ from datetime import datetime
 from pydantic import ValidationError as PydanticValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.activity.service import ActivityService
 from app.features.auth.models import User, UserRole
 from app.features.bins.repository import BinRepository
 from app.features.collections.models import (
@@ -41,6 +42,7 @@ class CollectionService:
         self.predictions = PredictionRepository(db)
         self.hotels = HotelRepository(db)
         self.bins = BinRepository(db)
+        self.activity = ActivityService(db)
 
     @staticmethod
     def _manager_scope(user: User) -> uuid.UUID | None:
@@ -93,6 +95,12 @@ class CollectionService:
         await self._validate_refs(data.hotel_id, data.bin_id)
         collection = WasteCollection(**data.model_dump(exclude_none=False))
         collection = await self.collections.add(collection)
+        await self.activity.record(
+            action="collection.created",
+            user=user,
+            entity_type="collection",
+            entity_id=collection.id,
+        )
         await self.db.commit()
         await self.db.refresh(collection)
         return collection
@@ -113,6 +121,12 @@ class CollectionService:
 
     async def delete(self, collection_id: uuid.UUID, user: User) -> None:
         collection = await self.get_or_404(collection_id, user)
+        await self.activity.record(
+            action="collection.deleted",
+            user=user,
+            entity_type="collection",
+            entity_id=collection.id,
+        )
         await self.collections.delete(collection)
         await self.db.commit()
 

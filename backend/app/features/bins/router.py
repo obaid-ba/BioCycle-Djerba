@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.features.alerts.service import AlertService
 from app.features.auth.dependencies import CurrentUser, require_role
 from app.features.auth.models import UserRole
 from app.features.bins.models import BinStatus, BinType
@@ -135,4 +136,6 @@ async def ingest_reading(
 ) -> SensorReadingRead:
     reading, event = await BinService(db).ingest(bin_id=bin_id, data=payload)
     await manager.broadcast(event)
+    for alert_event in await AlertService(db).evaluate_for_reading(reading):
+        await manager.broadcast(alert_event)
     return SensorReadingRead.model_validate(reading)

@@ -4,6 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.activity.service import ActivityService
 from app.features.auth.models import User, UserRole
 from app.features.auth.repository import UserRepository
 from app.features.hotels.models import Hotel, HotelStatus
@@ -18,6 +19,7 @@ class HotelService:
         self.db = db
         self.hotels = HotelRepository(db)
         self.users = UserRepository(db)
+        self.activity = ActivityService(db)
 
     @staticmethod
     def _manager_scope(user: User) -> uuid.UUID | None:
@@ -63,6 +65,13 @@ class HotelService:
         await self._validate_manager(data.manager_id)
         hotel = Hotel(**data.model_dump())
         hotel = await self.hotels.add(hotel)
+        await self.activity.record(
+            action="hotel.created",
+            user=user,
+            entity_type="hotel",
+            entity_id=hotel.id,
+            message=hotel.name,
+        )
         await self.db.commit()
         await self.db.refresh(hotel)
         return hotel
@@ -81,5 +90,12 @@ class HotelService:
 
     async def delete(self, hotel_id: uuid.UUID, user: User) -> None:
         hotel = await self.get_or_404(hotel_id, user)
+        await self.activity.record(
+            action="hotel.deleted",
+            user=user,
+            entity_type="hotel",
+            entity_id=hotel.id,
+            message=hotel.name,
+        )
         await self.hotels.delete(hotel)
         await self.db.commit()

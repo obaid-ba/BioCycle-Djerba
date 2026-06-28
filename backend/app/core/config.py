@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     AI_SERVICE_BASE_URL: str = "http://localhost:9000"
     AI_SERVICE_TIMEOUT_SECONDS: int = 10
 
+    # ---- Alert thresholds (Phase 6) ----
+    ALERT_FILL_THRESHOLD: float = 85.0
+    ALERT_FILL_CRITICAL: float = 95.0
+    ALERT_BATTERY_THRESHOLD: float = 15.0
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:  # noqa: N802 (settings-style constant name)

@@ -11,6 +11,7 @@ from pydantic import ValidationError as PydanticValidationError
 
 from app.core.database import AsyncSessionLocal
 from app.core.logging import get_logger
+from app.features.alerts.service import AlertService
 from app.features.bins.schemas import SensorReadingCreate
 from app.features.bins.service import BinService
 from app.realtime.manager import manager
@@ -83,10 +84,13 @@ async def process_message(topic: str, payload: bytes | str) -> bool:
 
     async with AsyncSessionLocal() as db:
         try:
-            _, event = await BinService(db).ingest(code=code, data=reading_in)
+            reading, event = await BinService(db).ingest(code=code, data=reading_in)
         except NotFoundError:
             logger.warning("Telemetry for unknown bin code: %s", code)
             return False
+        alert_events = await AlertService(db).evaluate_for_reading(reading)
 
     await manager.broadcast(event)
+    for alert_event in alert_events:
+        await manager.broadcast(alert_event)
     return True
