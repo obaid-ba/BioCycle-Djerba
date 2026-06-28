@@ -15,6 +15,14 @@ from app.mqtt.processor import process_message
 
 logger = get_logger(__name__)
 
+# Module-level connection state so request handlers (e.g. dashboard status) can
+# report broker health without holding a reference to the consumer instance.
+_connected = False
+
+
+def is_mqtt_connected() -> bool:
+    return _connected
+
 
 class MQTTConsumer:
     def __init__(self, loop: asyncio.AbstractEventLoop) -> None:
@@ -26,6 +34,7 @@ class MQTTConsumer:
         if settings.MQTT_USERNAME:
             self._client.username_pw_set(settings.MQTT_USERNAME, settings.MQTT_PASSWORD or None)
         self._client.on_connect = self._on_connect
+        self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
 
     def start(self) -> None:
@@ -51,8 +60,15 @@ class MQTTConsumer:
             pass
 
     def _on_connect(self, client, userdata, flags, reason_code, properties=None) -> None:
+        global _connected
+        _connected = True
         client.subscribe(settings.MQTT_TOPIC)
         logger.info("MQTT subscribed to %s", settings.MQTT_TOPIC)
+
+    def _on_disconnect(self, client, userdata, *args) -> None:
+        global _connected
+        _connected = False
+        logger.warning("MQTT disconnected")
 
     def _on_message(self, client, userdata, message) -> None:
         # Runs on paho's network thread — hand off to the asyncio loop.

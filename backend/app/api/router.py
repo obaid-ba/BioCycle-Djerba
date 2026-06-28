@@ -9,6 +9,10 @@ from fastapi import APIRouter
 
 from app.features.activity.router import router as activity_router
 from app.features.alerts.router import router as alerts_router
+from app.features.analytics.router import (
+    analytics_router,
+    dashboard_router,
+)
 from app.features.auth.router import router as auth_router
 from app.features.bins.router import router as bins_router
 from app.features.collections.router import router as collections_router
@@ -24,4 +28,6 @@ api_router.include_router(bins_router, prefix="/bins", tags=["Smart Bins"])
 api_router.include_router(collections_router, prefix="/collections", tags=["Waste Collections"])
 api_router.include_router(alerts_router, prefix="/alerts", tags=["Alerts"])
 api_router.include_router(activity_router, prefix="/activity-logs", tags=["Activity Logs"])
+api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
+api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 api_router.include_router(realtime_router, tags=["Realtime"])
