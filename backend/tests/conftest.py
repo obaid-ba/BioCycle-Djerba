@@ -1,19 +1,26 @@
 """Shared pytest fixtures.
 
-Tests run against an in-memory SQLite database via the same async session
-machinery as production, with `get_db` overridden. This keeps tests fast and
-hermetic — no Postgres required for unit/integration tests of the app layer.
+Tests run against a shared in-memory SQLite database (StaticPool keeps the single
+connection alive across sessions). Crucially, each HTTP request gets its OWN
+session via `get_db` — exactly like production — so we exercise realistic
+session-per-request semantics instead of one long-lived session.
 """
 
 from collections.abc import AsyncGenerator
 
 import pytest
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import StaticPool
 
 from app.core.database import get_db
 from app.core.security import hash_password
 from app.features.auth.models import User, UserRole
+from app.features.bins.models import BinStatus, BinType, SmartBin
 from app.features.hotels.models import Hotel, HotelStatus
 from app.main import app
 from app.shared.models import Base
@@ -22,22 +29,32 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
 @pytest.fixture
-async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    engine = create_async_engine(TEST_DATABASE_URL, future=True)
+async def engine() -> AsyncGenerator:
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with session_factory() as session:
-        yield session
-
+    yield engine
     await engine.dispose()
 
 
 @pytest.fixture
-async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
+def session_factory(engine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(engine, expire_on_commit=False)
+
+
+@pytest.fixture
+async def client(session_factory) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        yield db_session
+        async with session_factory() as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
 
     app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=app)
@@ -46,10 +63,14 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
-def make_user(db_session: AsyncSession):
-    """Factory fixture that inserts a user into the test DB."""
+# --------------------------------------------------------------------------- #
+# Data factories — each opens a short-lived session, commits, and returns the
+# persisted entity. They share the same in-memory DB as the request sessions.
+# --------------------------------------------------------------------------- #
 
+
+@pytest.fixture
+def make_user(session_factory):
     async def _make_user(
         *,
         email: str = "user@test.io",
@@ -58,17 +79,18 @@ def make_user(db_session: AsyncSession):
         role: UserRole = UserRole.HOTEL_MANAGER,
         is_active: bool = True,
     ) -> User:
-        user = User(
-            email=email,
-            full_name=full_name,
-            role=role,
-            hashed_password=hash_password(password),
-            is_active=is_active,
-        )
-        db_session.add(user)
-        await db_session.commit()
-        await db_session.refresh(user)
-        return user
+        async with session_factory() as session:
+            user = User(
+                email=email,
+                full_name=full_name,
+                role=role,
+                hashed_password=hash_password(password),
+                is_active=is_active,
+            )
+            session.add(user)
+            await session.commit()
+            await session.refresh(user)
+            return user
 
     return _make_user
 
@@ -100,9 +122,7 @@ def auth_headers(make_user, login):
 
 
 @pytest.fixture
-def make_hotel(db_session: AsyncSession):
-    """Factory fixture that inserts a hotel into the test DB."""
-
+def make_hotel(session_factory):
     async def _make_hotel(
         *,
         name: str = "Test Hotel",
@@ -111,10 +131,39 @@ def make_hotel(db_session: AsyncSession):
         manager_id=None,
         **kwargs,
     ) -> Hotel:
-        hotel = Hotel(name=name, city=city, status=status, manager_id=manager_id, **kwargs)
-        db_session.add(hotel)
-        await db_session.commit()
-        await db_session.refresh(hotel)
-        return hotel
+        async with session_factory() as session:
+            hotel = Hotel(name=name, city=city, status=status, manager_id=manager_id, **kwargs)
+            session.add(hotel)
+            await session.commit()
+            await session.refresh(hotel)
+            return hotel
 
     return _make_hotel
+
+
+@pytest.fixture
+def make_bin(session_factory):
+    async def _make_bin(
+        *,
+        hotel_id,
+        code: str = "BIN-001",
+        name: str = "Test Bin",
+        bin_type: BinType = BinType.MIXED,
+        status: BinStatus = BinStatus.OFFLINE,
+        **kwargs,
+    ) -> SmartBin:
+        async with session_factory() as session:
+            bin_ = SmartBin(
+                hotel_id=hotel_id,
+                code=code,
+                name=name,
+                bin_type=bin_type,
+                status=status,
+                **kwargs,
+            )
+            session.add(bin_)
+            await session.commit()
+            await session.refresh(bin_)
+            return bin_
+
+    return _make_bin
