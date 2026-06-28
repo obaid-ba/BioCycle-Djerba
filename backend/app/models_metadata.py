@@ -7,6 +7,10 @@ here as it is built. Import this module to populate `Base.metadata`.
 
 from app.features.auth.models import User  # noqa: F401
 from app.features.bins.models import SensorReading, SmartBin  # noqa: F401
+from app.features.collections.models import (  # noqa: F401
+    Prediction,
+    WasteCollection,
+)
 from app.features.hotels.models import Hotel  # noqa: F401
 from app.shared.models import Base
 

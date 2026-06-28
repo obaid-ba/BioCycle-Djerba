@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 from app.features.auth.router import router as auth_router
 from app.features.bins.router import router as bins_router
+from app.features.collections.router import router as collections_router
 from app.features.health.router import router as health_router
 from app.features.hotels.router import router as hotels_router
 from app.realtime.router import router as realtime_router
@@ -18,4 +19,5 @@ api_router.include_router(health_router)
 api_router.include_router(auth_router, prefix="/auth", tags=["Auth"])
 api_router.include_router(hotels_router, prefix="/hotels", tags=["Hotels"])
 api_router.include_router(bins_router, prefix="/bins", tags=["Smart Bins"])
+api_router.include_router(collections_router, prefix="/collections", tags=["Waste Collections"])
 api_router.include_router(realtime_router, tags=["Realtime"])
