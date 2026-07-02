@@ -139,6 +139,23 @@ export interface SystemStatus {
   websocket_connections: number;
 }
 
+export interface WasteDistribution {
+  organic_kg: number;
+  non_organic_kg: number;
+  total_kg: number;
+  organic_percentage: number | null;
+}
+
+export interface TimeseriesBucket {
+  bucket: string;
+  count: number;
+  organic_kg: number;
+  non_organic_kg: number;
+  total_kg: number;
+}
+
+export type TimeseriesGranularity = "day" | "month";
+
 export interface DashboardStats {
   today_collections: number;
   organic_waste_kg: number;

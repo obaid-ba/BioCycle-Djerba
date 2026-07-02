@@ -1,30 +1,91 @@
-import { Battery, Flame, Leaf, Recycle, Zap } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useAuth } from "@/context/auth";
+  AlertTriangle,
+  Bell,
+  Building2,
+  Flame,
+  Leaf,
+  Recycle,
+  Trash2,
+  Truck,
+  Zap,
+} from "lucide-react";
+import { useState } from "react";
 
-const kpis = [
-  { label: "Organic Waste", value: "1,240 kg", icon: Leaf, hint: "+12% today" },
-  { label: "Predicted Energy", value: "320 kWh", icon: Zap, hint: "from biogas" },
-  { label: "Biogas", value: "84 m³", icon: Flame, hint: "estimated" },
-  { label: "CO₂ Saved", value: "210 kg", icon: Recycle, hint: "this week" },
-];
+import { CollectionsTrendChart } from "@/components/dashboard/CollectionsTrendChart";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { SystemStatusBar } from "@/components/dashboard/SystemStatusBar";
+import { WasteDistributionChart } from "@/components/dashboard/WasteDistributionChart";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { useAuth } from "@/context/auth";
+import {
+  useDashboardStats,
+  useTimeseries,
+  useWasteDistribution,
+} from "@/hooks/useDashboard";
+import { formatKg } from "@/lib/utils";
+import type { TimeseriesGranularity } from "@/types";
 
 export function Dashboard() {
   const { user } = useAuth();
+  const [granularity, setGranularity] = useState<TimeseriesGranularity>("day");
+
+  const stats = useDashboardStats();
+  const distribution = useWasteDistribution();
+  const timeseries = useTimeseries(granularity);
+
+  const s = stats.data;
+  const kwh = (v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh`;
+
+  const kpis = [
+    {
+      label: "Today's Collections",
+      value: s ? String(s.today_collections) : "—",
+      icon: Truck,
+    },
+    {
+      label: "Organic Waste",
+      value: formatKg(s?.organic_waste_kg),
+      icon: Leaf,
+      hint: "today",
+    },
+    {
+      label: "Predicted Energy",
+      value: s ? kwh(s.predicted_energy_kwh) : "—",
+      icon: Zap,
+      hint: "from biogas",
+    },
+    {
+      label: "Biogas",
+      value: s ? `${s.predicted_biogas_m3.toFixed(0)} m³` : "—",
+      icon: Flame,
+      hint: "estimated",
+    },
+    {
+      label: "CO₂ Saved",
+      value: formatKg(s?.co2_saved_kg),
+      icon: Recycle,
+      hint: "today",
+    },
+    {
+      label: "Hotels Connected",
+      value: s ? String(s.hotels_connected) : "—",
+      icon: Building2,
+    },
+    {
+      label: "Bins Online",
+      value: s ? `${s.online_bins} / ${s.total_bins}` : "—",
+      icon: Trash2,
+    },
+    {
+      label: "Open Alerts",
+      value: s ? String(s.open_alerts) : "—",
+      icon: Bell,
+    },
+  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">
           Welcome back{user ? `, ${user.full_name.split(" ")[0]}` : ""}
@@ -34,66 +95,42 @@ export function Dashboard() {
         </p>
       </div>
 
-      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map(({ label, value, icon: Icon, hint }) => (
-          <Card key={label}>
-            <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {label}
-              </CardTitle>
-              <Icon className="size-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{value}</div>
-              <p className="text-xs text-muted-foreground">{hint}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {stats.isError ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Buttons & badges</CardTitle>
-            <CardDescription>Consistent variants across the app.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Button>Primary</Button>
-              <Button variant="secondary">Secondary</Button>
-              <Button variant="outline">Outline</Button>
-              <Button variant="ghost">Ghost</Button>
-              <Button variant="destructive">Destructive</Button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge>Online</Badge>
-              <Badge variant="warning">Warning</Badge>
-              <Badge variant="destructive">Critical</Badge>
-              <Badge variant="secondary">
-                <Battery className="mr-1 size-3" /> 18%
-              </Badge>
-            </div>
+          <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
+            <AlertTriangle className="size-6 text-warning" />
+            <p className="text-sm text-muted-foreground">
+              Could not load dashboard data.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => stats.refetch()}>
+              Retry
+            </Button>
           </CardContent>
         </Card>
+      ) : (
+        <>
+          <SystemStatusBar system={s?.system} loading={stats.isLoading} />
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Form controls</CardTitle>
-            <CardDescription>Accessible inputs with focus rings.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" placeholder="you@hotel.tn" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="pw">Password</Label>
-              <Input id="pw" type="password" placeholder="••••••••" />
-            </div>
-            <Button className="w-full">Sign in</Button>
-          </CardContent>
-        </Card>
-      </div>
+          <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {kpis.map((kpi) => (
+              <StatCard key={kpi.label} {...kpi} loading={stats.isLoading} />
+            ))}
+          </section>
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <CollectionsTrendChart
+              data={timeseries.data}
+              loading={timeseries.isLoading}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+            />
+            <WasteDistributionChart
+              data={distribution.data}
+              loading={distribution.isLoading}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
