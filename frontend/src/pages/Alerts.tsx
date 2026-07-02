@@ -26,7 +26,9 @@ import {
   useDeleteAlert,
   useResolveAlert,
 } from "@/hooks/useAlerts";
+import { useToast } from "@/context/toast";
 import { useHasRole } from "@/hooks/useHasRole";
+import { messageFromError } from "@/lib/errors";
 import { formatDateTime } from "@/lib/utils";
 import {
   alertSeverityVariant,
@@ -42,6 +44,7 @@ export function Alerts() {
   const [formOpen, setFormOpen] = useState(false);
   const [deleting, setDeleting] = useState<Alert | null>(null);
 
+  const toast = useToast();
   const canAct = useHasRole("admin", "operator");
 
   const query = useAlerts({
@@ -60,12 +63,32 @@ export function Alerts() {
 
   async function submitForm(payload: AlertCreate) {
     await createMut.mutateAsync(payload);
+    toast.success("Alert raised.");
   }
 
   async function confirmDelete() {
     if (!deleting) return;
-    await deleteMut.mutateAsync(deleting.id);
-    setDeleting(null);
+    try {
+      await deleteMut.mutateAsync(deleting.id);
+      toast.success("Alert deleted.");
+      setDeleting(null);
+    } catch (error) {
+      toast.error(messageFromError(error, "Could not delete alert."));
+    }
+  }
+
+  function acknowledge(id: string) {
+    ackMut.mutate(id, {
+      onSuccess: () => toast.success("Alert acknowledged."),
+      onError: (e) => toast.error(messageFromError(e)),
+    });
+  }
+
+  function resolve(id: string) {
+    resolveMut.mutate(id, {
+      onSuccess: () => toast.success("Alert resolved."),
+      onError: (e) => toast.error(messageFromError(e)),
+    });
   }
 
   return (
@@ -164,7 +187,7 @@ export function Alerts() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => ackMut.mutate(alert.id)}
+                            onClick={() => acknowledge(alert.id)}
                             disabled={ackMut.isPending}
                           >
                             <Check />
@@ -175,7 +198,7 @@ export function Alerts() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => resolveMut.mutate(alert.id)}
+                            onClick={() => resolve(alert.id)}
                             disabled={resolveMut.isPending}
                           >
                             <CheckCheck />

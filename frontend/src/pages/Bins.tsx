@@ -25,8 +25,10 @@ import {
   useDeleteBin,
   useUpdateBin,
 } from "@/hooks/useBins";
+import { useToast } from "@/context/toast";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useHasRole } from "@/hooks/useHasRole";
+import { messageFromError } from "@/lib/errors";
 import { binStatusVariant, humanize } from "@/lib/statusBadge";
 import type { BinStatus, SmartBin, SmartBinCreate } from "@/types";
 
@@ -57,6 +59,7 @@ export function Bins() {
   const [editing, setEditing] = useState<SmartBin | null>(null);
   const [deleting, setDeleting] = useState<SmartBin | null>(null);
 
+  const toast = useToast();
   const canEdit = useHasRole("admin", "operator");
 
   const query = useBins({
@@ -73,14 +76,24 @@ export function Bins() {
   const colSpan = 5 + (canEdit ? 1 : 0);
 
   async function submitForm(payload: SmartBinCreate) {
-    if (editing) await updateMut.mutateAsync({ id: editing.id, payload });
-    else await createMut.mutateAsync(payload);
+    if (editing) {
+      await updateMut.mutateAsync({ id: editing.id, payload });
+      toast.success("Bin updated.");
+    } else {
+      await createMut.mutateAsync(payload);
+      toast.success("Bin registered.");
+    }
   }
 
   async function confirmDelete() {
     if (!deleting) return;
-    await deleteMut.mutateAsync(deleting.id);
-    setDeleting(null);
+    try {
+      await deleteMut.mutateAsync(deleting.id);
+      toast.success("Bin deleted.");
+      setDeleting(null);
+    } catch (error) {
+      toast.error(messageFromError(error, "Could not delete bin."));
+    }
   }
 
   return (

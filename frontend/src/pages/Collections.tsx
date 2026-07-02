@@ -26,6 +26,7 @@ import {
   usePredictCollection,
   useUpdateCollection,
 } from "@/hooks/useCollections";
+import { useToast } from "@/context/toast";
 import { useHasRole } from "@/hooks/useHasRole";
 import { messageFromError } from "@/lib/errors";
 import { formatDateTime, formatKg } from "@/lib/utils";
@@ -40,6 +41,7 @@ export function Collections() {
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [predictError, setPredictError] = useState<string | null>(null);
 
+  const toast = useToast();
   const canEdit = useHasRole("admin", "operator");
 
   const query = useCollections({ page, sort: "-collected_at" });
@@ -56,15 +58,22 @@ export function Collections() {
       const { hotel_id: _hotel, ...rest } = payload;
       void _hotel;
       await updateMut.mutateAsync({ id: editing.id, payload: rest });
+      toast.success("Collection updated.");
     } else {
       await createMut.mutateAsync(payload);
+      toast.success("Collection recorded.");
     }
   }
 
   async function confirmDelete() {
     if (!deleting) return;
-    await deleteMut.mutateAsync(deleting.id);
-    setDeleting(null);
+    try {
+      await deleteMut.mutateAsync(deleting.id);
+      toast.success("Collection deleted.");
+      setDeleting(null);
+    } catch (error) {
+      toast.error(messageFromError(error, "Could not delete collection."));
+    }
   }
 
   async function runPredict(id: string) {

@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/context/toast";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useHasRole } from "@/hooks/useHasRole";
 import {
@@ -27,6 +28,7 @@ import {
   useHotels,
   useUpdateHotel,
 } from "@/hooks/useHotels";
+import { messageFromError } from "@/lib/errors";
 import { hotelStatusVariant, humanize } from "@/lib/statusBadge";
 import type { Hotel, HotelCreate, HotelStatus } from "@/types";
 
@@ -40,6 +42,7 @@ export function Hotels() {
   const [editing, setEditing] = useState<Hotel | null>(null);
   const [deleting, setDeleting] = useState<Hotel | null>(null);
 
+  const toast = useToast();
   const canEdit = useHasRole("admin", "operator");
 
   const query = useHotels({
@@ -66,14 +69,24 @@ export function Hotels() {
   }
 
   async function submitForm(payload: HotelCreate) {
-    if (editing) await updateMut.mutateAsync({ id: editing.id, payload });
-    else await createMut.mutateAsync(payload);
+    if (editing) {
+      await updateMut.mutateAsync({ id: editing.id, payload });
+      toast.success("Hotel updated.");
+    } else {
+      await createMut.mutateAsync(payload);
+      toast.success("Hotel created.");
+    }
   }
 
   async function confirmDelete() {
     if (!deleting) return;
-    await deleteMut.mutateAsync(deleting.id);
-    setDeleting(null);
+    try {
+      await deleteMut.mutateAsync(deleting.id);
+      toast.success("Hotel deleted.");
+      setDeleting(null);
+    } catch (error) {
+      toast.error(messageFromError(error, "Could not delete hotel."));
+    }
   }
 
   return (
