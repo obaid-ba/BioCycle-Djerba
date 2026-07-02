@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/context/auth";
-import type { ApiError } from "@/types";
+import { messageFromError } from "@/lib/errors";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -31,14 +31,12 @@ interface LocationState {
   from?: { pathname: string };
 }
 
-function messageFromError(error: unknown): string {
-  if (error instanceof AxiosError) {
-    if (error.response?.status === 401) return "Invalid email or password.";
-    const data = error.response?.data as ApiError | undefined;
-    if (data?.error?.message) return data.error.message;
-    if (!error.response) return "Cannot reach the server. Please try again.";
+function messageFromLoginError(error: unknown): string {
+  // A 401 here means bad credentials, not an expired session.
+  if (error instanceof AxiosError && error.response?.status === 401) {
+    return "Invalid email or password.";
   }
-  return "Something went wrong. Please try again.";
+  return messageFromError(error, "Something went wrong. Please try again.");
 }
 
 export function Login() {
@@ -64,7 +62,7 @@ export function Login() {
       await login(values.email, values.password);
       navigate(from, { replace: true });
     } catch (error) {
-      setFormError(messageFromError(error));
+      setFormError(messageFromLoginError(error));
     }
   }
 

@@ -139,6 +139,52 @@ export interface SystemStatus {
   websocket_connections: number;
 }
 
+export interface HotelCreate {
+  name: string;
+  address?: string | null;
+  city: string;
+  country?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  number_of_rooms?: number | null;
+  status?: HotelStatus;
+  manager_id?: string | null;
+}
+export type HotelUpdate = Partial<HotelCreate>;
+
+export interface SmartBinCreate {
+  code: string;
+  name?: string | null;
+  hotel_id: string;
+  bin_type?: BinType;
+  status?: BinStatus;
+  capacity_liters?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+export type SmartBinUpdate = Partial<SmartBinCreate>;
+
+export interface WasteCollectionCreate {
+  hotel_id: string;
+  bin_id?: string | null;
+  collected_at?: string | null;
+  organic_weight_kg: number;
+  non_organic_weight_kg: number;
+  notes?: string | null;
+}
+export type WasteCollectionUpdate = Partial<Omit<WasteCollectionCreate, "hotel_id">>;
+
+export interface AlertCreate {
+  hotel_id?: string | null;
+  bin_id?: string | null;
+  type?: AlertType;
+  severity?: AlertSeverity;
+  title: string;
+  message?: string | null;
+}
+
 export interface WasteDistribution {
   organic_kg: number;
   non_organic_kg: number;
