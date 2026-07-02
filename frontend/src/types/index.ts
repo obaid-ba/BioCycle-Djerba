@@ -185,6 +185,43 @@ export interface AlertCreate {
   message?: string | null;
 }
 
+export interface BinReadingEvent {
+  type: "bin.reading";
+  data: {
+    bin_id: string;
+    code: string;
+    hotel_id: string;
+    status: BinStatus;
+    fill_level: number;
+    battery_level: number | null;
+    temperature_c: number | null;
+    humidity: number | null;
+    weight_kg: number | null;
+    recorded_at: string | null;
+  };
+}
+
+export interface AlertEvent {
+  type: "alert";
+  data: {
+    id: string;
+    hotel_id: string | null;
+    bin_id: string | null;
+    alert_type: AlertType;
+    severity: AlertSeverity;
+    status: AlertStatus;
+    title: string;
+    message: string | null;
+    created_at: string | null;
+  };
+}
+
+export interface ConnectionAckEvent {
+  type: "connection.ack";
+}
+
+export type RealtimeEvent = BinReadingEvent | AlertEvent | ConnectionAckEvent;
+
 export interface WasteDistribution {
   organic_kg: number;
   non_organic_kg: number;
