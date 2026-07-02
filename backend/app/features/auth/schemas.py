@@ -32,9 +32,22 @@ class UserCreate(BaseSchema):
     role: UserRole = UserRole.HOTEL_MANAGER
 
 
+class UserUpdate(BaseSchema):
+    """Admin edit of a user — all fields optional (PATCH semantics)."""
+
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    role: UserRole | None = None
+    is_active: bool | None = None
+    password: str | None = Field(default=None, min_length=8, max_length=128)
+
+
 class UserRead(BaseSchema):
     id: uuid.UUID
-    email: EmailStr
+    # Plain str on the read path: emails are validated with EmailStr on input
+    # (login/create). Re-validating already-persisted values on output would let
+    # one legacy/edge-case address (e.g. a reserved-TLD dev seed) 500 the whole
+    # list endpoint.
+    email: str
     full_name: str
     role: UserRole
     is_active: bool

@@ -127,3 +127,83 @@ async def test_create_duplicate_user_conflicts(client: AsyncClient, make_user: C
 
     assert response.status_code == 409
     assert response.json()["error"]["code"] == "conflict"
+
+
+async def _admin_token(client: AsyncClient, make_user: Callable) -> str:
+    await make_user(email="admin@test.io", password="password123", role=UserRole.ADMIN)
+    return (await _login(client, "admin@test.io", "password123")).json()["access_token"]
+
+
+async def test_list_users_admin_only(client: AsyncClient, make_user: Callable) -> None:
+    await make_user(email="hm@test.io", password="password123", role=UserRole.HOTEL_MANAGER)
+    token = (await _login(client, "hm@test.io", "password123")).json()["access_token"]
+
+    response = await client.get("/api/auth/users", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 403
+
+
+async def test_list_users_returns_page(client: AsyncClient, make_user: Callable) -> None:
+    token = await _admin_token(client, make_user)
+    await make_user(email="extra@test.io", password="password123", role=UserRole.OPERATOR)
+
+    response = await client.get("/api/auth/users", headers={"Authorization": f"Bearer {token}"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] >= 2
+    assert any(u["email"] == "extra@test.io" for u in body["items"])
+
+
+async def test_update_user_changes_role_and_status(
+    client: AsyncClient, make_user: Callable
+) -> None:
+    token = await _admin_token(client, make_user)
+    target = await make_user(email="target@test.io", password="password123", role=UserRole.OPERATOR)
+
+    response = await client.patch(
+        f"/api/auth/users/{target.id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"role": "hotel_manager", "is_active": False, "full_name": "Renamed"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["role"] == "hotel_manager"
+    assert body["is_active"] is False
+    assert body["full_name"] == "Renamed"
+
+
+async def test_update_missing_user_404(client: AsyncClient, make_user: Callable) -> None:
+    token = await _admin_token(client, make_user)
+
+    response = await client.patch(
+        "/api/auth/users/00000000-0000-0000-0000-000000000000",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"full_name": "Ghost"},
+    )
+
+    assert response.status_code == 404
+
+
+async def test_delete_user_succeeds(client: AsyncClient, make_user: Callable) -> None:
+    token = await _admin_token(client, make_user)
+    target = await make_user(email="doomed@test.io", password="password123")
+
+    response = await client.delete(
+        f"/api/auth/users/{target.id}", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 204
+
+
+async def test_delete_own_account_forbidden(client: AsyncClient, make_user: Callable) -> None:
+    admin = await make_user(email="admin@test.io", password="password123", role=UserRole.ADMIN)
+    token = (await _login(client, "admin@test.io", "password123")).json()["access_token"]
+
+    response = await client.delete(
+        f"/api/auth/users/{admin.id}", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "forbidden"

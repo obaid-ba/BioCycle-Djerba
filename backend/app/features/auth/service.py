@@ -5,6 +5,7 @@ router stays thin and the repository stays query-only.
 """
 
 import uuid
+from collections.abc import Sequence
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,8 +20,9 @@ from app.core.security import (
 )
 from app.features.auth.models import User
 from app.features.auth.repository import UserRepository
-from app.features.auth.schemas import TokenResponse, UserCreate
-from app.shared.exceptions import ConflictError, UnauthorizedError
+from app.features.auth.schemas import TokenResponse, UserCreate, UserUpdate
+from app.shared.exceptions import ConflictError, ForbiddenError, NotFoundError, UnauthorizedError
+from app.shared.schemas import PaginationParams
 
 
 class AuthService:
@@ -71,3 +73,35 @@ class AuthService:
         await self.db.commit()
         await self.db.refresh(user)
         return user
+
+    async def list_users(self, params: PaginationParams) -> tuple[Sequence[User], int]:
+        items = await self.users.list(offset=params.offset, limit=params.limit)
+        total = await self.users.count()
+        return items, total
+
+    async def get_or_404(self, user_id: uuid.UUID) -> User:
+        user = await self.users.get(user_id)
+        if user is None:
+            raise NotFoundError("User not found")
+        return user
+
+    async def update_user(self, user_id: uuid.UUID, data: UserUpdate) -> User:
+        user = await self.get_or_404(user_id)
+        if data.full_name is not None:
+            user.full_name = data.full_name
+        if data.role is not None:
+            user.role = data.role
+        if data.is_active is not None:
+            user.is_active = data.is_active
+        if data.password is not None:
+            user.hashed_password = hash_password(data.password)
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+    async def delete_user(self, user_id: uuid.UUID, current_user: User) -> None:
+        if user_id == current_user.id:
+            raise ForbiddenError("You cannot delete your own account")
+        user = await self.get_or_404(user_id)
+        await self.users.delete(user)
+        await self.db.commit()
