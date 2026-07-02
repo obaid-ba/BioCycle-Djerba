@@ -1,0 +1,155 @@
+/** Shared API types mirroring the backend contracts. */
+
+export type UserRole = "admin" | "operator" | "hotel_manager";
+export type HotelStatus = "active" | "inactive" | "onboarding";
+export type BinType = "organic" | "non_organic" | "mixed";
+export type BinStatus = "online" | "offline" | "maintenance";
+export type AlertType =
+  | "bin_full"
+  | "bin_battery_low"
+  | "bin_offline"
+  | "system"
+  | "custom";
+export type AlertSeverity = "info" | "warning" | "critical";
+export type AlertStatus = "open" | "acknowledged" | "resolved";
+export type PredictionStatus = "success" | "failed";
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  pages: number;
+}
+
+export interface ApiError {
+  error: { code: string; message: string; details?: unknown };
+}
+
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: UserRole;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+}
+
+export interface Hotel {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string;
+  country: string;
+  latitude: number | null;
+  longitude: number | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  number_of_rooms: number | null;
+  status: HotelStatus;
+  manager_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SmartBin {
+  id: string;
+  code: string;
+  name: string | null;
+  hotel_id: string;
+  bin_type: BinType;
+  status: BinStatus;
+  capacity_liters: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  fill_level: number | null;
+  battery_level: number | null;
+  last_reading_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SensorReading {
+  id: string;
+  bin_id: string;
+  fill_level: number;
+  weight_kg: number | null;
+  temperature_c: number | null;
+  humidity: number | null;
+  battery_level: number | null;
+  recorded_at: string;
+  created_at: string;
+}
+
+export interface WasteCollection {
+  id: string;
+  hotel_id: string;
+  bin_id: string | null;
+  collected_at: string;
+  organic_weight_kg: number;
+  non_organic_weight_kg: number;
+  total_weight_kg: number;
+  organic_percentage: number | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Prediction {
+  id: string;
+  collection_id: string;
+  status: PredictionStatus;
+  predicted_energy_kwh: number | null;
+  predicted_biogas_m3: number | null;
+  co2_saved_kg: number | null;
+  model_version: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface Alert {
+  id: string;
+  hotel_id: string | null;
+  bin_id: string | null;
+  type: AlertType;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  title: string;
+  message: string | null;
+  context: Record<string, unknown> | null;
+  acknowledged_by: string | null;
+  acknowledged_at: string | null;
+  resolved_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SystemStatus {
+  ai: string;
+  mqtt: string;
+  websocket: string;
+  websocket_connections: number;
+}
+
+export interface DashboardStats {
+  today_collections: number;
+  organic_waste_kg: number;
+  non_organic_waste_kg: number;
+  total_waste_kg: number;
+  predicted_energy_kwh: number;
+  predicted_biogas_m3: number;
+  co2_saved_kg: number;
+  hotels_connected: number;
+  total_bins: number;
+  online_bins: number;
+  open_alerts: number;
+  system: SystemStatus;
+}
