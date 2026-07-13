@@ -325,3 +325,39 @@ export interface RequestTransition {
   collected_weight_kg?: number | null;
   notes?: string | null;
 }
+
+// ---- Request-centric analytics (dashboard) ----
+export interface RequestStats {
+  total_requests: number;
+  status_counts: Record<RequestStatus, number>;
+  declared_weight_kg: number;
+  collected_weight_kg: number;
+  estimated_methane_m3: number;
+  estimated_energy_kwh: number;
+  estimated_co2_kg: number;
+  avg_quality_score: number | null;
+  acceptance_rate: number | null;
+}
+
+export interface HotelRankingRow {
+  hotel_id: string;
+  hotel_name: string;
+  request_count: number;
+  total_weight_kg: number;
+  total_methane_m3: number;
+  avg_quality_score: number | null;
+}
+
+export interface OperatorRankingRow {
+  operator_id: string;
+  operator_name: string;
+  handled_count: number;
+  completed_count: number;
+}
+
+export interface RequestTimeseriesBucket {
+  bucket: string;
+  count: number;
+  declared_weight_kg: number;
+  estimated_methane_m3: number;
+}

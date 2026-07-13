@@ -38,3 +38,43 @@ class TimeseriesBucket(BaseSchema):
     organic_kg: float
     non_organic_kg: float
     total_kg: float
+
+
+# --------------------------------------------------------------------------- #
+# Request-centric analytics (the current product's source of truth)
+# --------------------------------------------------------------------------- #
+class RequestStats(BaseSchema):
+    """Headline KPIs derived from collection_requests."""
+
+    total_requests: int
+    status_counts: dict[str, int]  # keyed by RequestStatus value
+    declared_weight_kg: float
+    collected_weight_kg: float
+    estimated_methane_m3: float
+    estimated_energy_kwh: float
+    estimated_co2_kg: float
+    avg_quality_score: float | None
+    acceptance_rate: float | None  # decided-and-not-rejected / decided
+
+
+class HotelRankingRow(BaseSchema):
+    hotel_id: str
+    hotel_name: str
+    request_count: int
+    total_weight_kg: float
+    total_methane_m3: float
+    avg_quality_score: float | None
+
+
+class OperatorRankingRow(BaseSchema):
+    operator_id: str
+    operator_name: str
+    handled_count: int
+    completed_count: int
+
+
+class RequestTimeseriesBucket(BaseSchema):
+    bucket: str
+    count: int
+    declared_weight_kg: float
+    estimated_methane_m3: float

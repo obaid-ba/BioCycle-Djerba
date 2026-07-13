@@ -1,8 +1,8 @@
 import {
   AlertTriangle,
-  Bell,
-  Building2,
+  CheckCircle2,
   Flame,
+  Gauge,
   Leaf,
   Recycle,
   Truck,
@@ -11,14 +11,19 @@ import {
 import { useState } from "react";
 
 import { CollectionsTrendChart } from "@/components/dashboard/CollectionsTrendChart";
+import { HotelRankingCard } from "@/components/dashboard/HotelRankingCard";
+import { OperatorRankingCard } from "@/components/dashboard/OperatorRankingCard";
+import { RequestStatusTiles } from "@/components/dashboard/RequestStatusTiles";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SystemStatusBar } from "@/components/dashboard/SystemStatusBar";
 import { WasteDistributionChart } from "@/components/dashboard/WasteDistributionChart";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useAuth } from "@/context/auth";
+import { useHasRole } from "@/hooks/useHasRole";
 import {
   useDashboardStats,
+  useRequestStats,
   useTimeseries,
   useWasteDistribution,
 } from "@/hooks/useDashboard";
@@ -27,54 +32,61 @@ import type { TimeseriesGranularity } from "@/types";
 
 export function Dashboard() {
   const { user } = useAuth();
+  const isAdmin = useHasRole("admin");
   const [granularity, setGranularity] = useState<TimeseriesGranularity>("day");
 
+  // Request-centric KPIs are the product's source of truth now.
+  const reqStats = useRequestStats();
+  // System status still comes from the legacy dashboard stats endpoint.
   const stats = useDashboardStats();
   const distribution = useWasteDistribution();
   const timeseries = useTimeseries(granularity);
 
-  const s = stats.data;
-  const kwh = (v: number) => `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh`;
+  const rs = reqStats.data;
+  const kwh = (v: number) =>
+    `${v.toLocaleString(undefined, { maximumFractionDigits: 0 })} kWh`;
 
   const kpis = [
     {
-      label: "Today's Collections",
-      value: s ? String(s.today_collections) : "—",
+      label: "Total Requests",
+      value: rs ? String(rs.total_requests) : "—",
       icon: Truck,
     },
     {
-      label: "Organic Waste",
-      value: formatKg(s?.organic_waste_kg),
+      label: "Declared Waste",
+      value: formatKg(rs?.declared_weight_kg),
       icon: Leaf,
-      hint: "today",
+      hint: "all requests",
     },
     {
-      label: "Predicted Energy",
-      value: s ? kwh(s.predicted_energy_kwh) : "—",
+      label: "Est. Methane",
+      value: rs ? `${rs.estimated_methane_m3.toFixed(0)} m³` : "—",
+      icon: Flame,
+      hint: "AI estimate",
+    },
+    {
+      label: "Est. Energy",
+      value: rs ? kwh(rs.estimated_energy_kwh) : "—",
       icon: Zap,
       hint: "from biogas",
     },
     {
-      label: "Biogas",
-      value: s ? `${s.predicted_biogas_m3.toFixed(0)} m³` : "—",
-      icon: Flame,
+      label: "CO₂ Saved",
+      value: formatKg(rs?.estimated_co2_kg),
+      icon: Recycle,
       hint: "estimated",
     },
     {
-      label: "CO₂ Saved",
-      value: formatKg(s?.co2_saved_kg),
-      icon: Recycle,
-      hint: "today",
+      label: "Avg. Quality",
+      value: rs?.avg_quality_score != null ? rs.avg_quality_score.toFixed(0) : "—",
+      icon: Gauge,
+      hint: "AI score",
     },
     {
-      label: "Hotels Connected",
-      value: s ? String(s.hotels_connected) : "—",
-      icon: Building2,
-    },
-    {
-      label: "Open Alerts",
-      value: s ? String(s.open_alerts) : "—",
-      icon: Bell,
+      label: "Acceptance Rate",
+      value: rs?.acceptance_rate != null ? `${rs.acceptance_rate.toFixed(0)}%` : "—",
+      icon: CheckCircle2,
+      hint: "of decided",
     },
   ];
 
@@ -85,31 +97,39 @@ export function Dashboard() {
           Welcome back{user ? `, ${user.full_name.split(" ")[0]}` : ""}
         </h1>
         <p className="text-muted-foreground">
-          Live overview of waste-to-energy operations across Djerba.
+          Live overview of organic-waste collection across Djerba.
         </p>
       </div>
 
-      {stats.isError ? (
+      {reqStats.isError ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <AlertTriangle className="size-6 text-warning" />
             <p className="text-sm text-muted-foreground">
               Could not load dashboard data.
             </p>
-            <Button variant="outline" size="sm" onClick={() => stats.refetch()}>
+            <Button variant="outline" size="sm" onClick={() => reqStats.refetch()}>
               Retry
             </Button>
           </CardContent>
         </Card>
       ) : (
         <>
-          <SystemStatusBar system={s?.system} loading={stats.isLoading} />
+          <SystemStatusBar system={stats.data?.system} loading={stats.isLoading} />
+
+          <RequestStatusTiles stats={rs} loading={reqStats.isLoading} />
 
           <section className="grid grid-cols-2 gap-4 md:grid-cols-4">
             {kpis.map((kpi) => (
-              <StatCard key={kpi.label} {...kpi} loading={stats.isLoading} />
+              <StatCard key={kpi.label} {...kpi} loading={reqStats.isLoading} />
             ))}
           </section>
+
+          {/* Leaderboards */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <HotelRankingCard />
+            {isAdmin && <OperatorRankingCard />}
+          </div>
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <CollectionsTrendChart
