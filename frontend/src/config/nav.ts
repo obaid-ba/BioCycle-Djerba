@@ -4,7 +4,6 @@ import {
   FileText,
   LayoutDashboard,
   MapPin,
-  Truck,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -25,7 +24,6 @@ export const navItems: NavItem[] = [
   { to: "/requests", label: "Requests", icon: ClipboardList },
   { to: "/hotels", label: "Hotels", icon: Building2 },
   { to: "/map", label: "Map", icon: MapPin },
-  { to: "/collections", label: "Collections", icon: Truck },
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
 ];

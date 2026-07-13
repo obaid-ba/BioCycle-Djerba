@@ -241,6 +241,7 @@ Déclencheurs actuels (→ **hôtel** uniquement) : `accepted`, `rejected`,
 1. ✅ Refuser au démarrage les secrets par défaut si `ENVIRONMENT=production` (`config.py` model_validator).
 2. ✅ Démonter les routers obsolètes (`bins`, `collections`, `alerts`) + retirer `/analytics/export`. Page Alerts retirée du front (nav + route + event realtime).
 3. ✅ Supprimer le code mort frontend bins (pages/hooks/services/components). *(Nettoyage du seed : reste à faire.)*
+   - ✅ **Page Collections retirée** (correctif) : elle était restée dans la nav + routée alors que son API `/collections` avait été démontée à l'étape 2 → page cassée (404). Collections est remplacé par le workflow **Collection Request**. Code frontend supprimé.
    - Code backend conservé (démonté, non supprimé) ; tests de la surface obsolète marqués `skip` (94 passent, 38 skippés).
    - **Découvert en passant :** l'ancien `/dashboard/stats` + `/analytics/{waste-distribution,timeseries}` (basés `waste_collections`) sont aussi obsolètes — le dashboard produit utilise `request-stats`. `/dashboard/stats` sert encore le `SystemStatusBar` (AI/WS). À trancher : reconstruire le SystemStatus autrement puis démonter, ou laisser.
 
