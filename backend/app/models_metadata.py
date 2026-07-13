@@ -14,6 +14,10 @@ from app.features.collections.models import (  # noqa: F401
     WasteCollection,
 )
 from app.features.hotels.models import Hotel  # noqa: F401
+from app.features.requests.models import (  # noqa: F401
+    CollectionRequest,
+    RequestPhoto,
+)
 from app.shared.models import Base
 
 __all__ = ["Base"]

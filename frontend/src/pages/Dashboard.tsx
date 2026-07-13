@@ -5,7 +5,6 @@ import {
   Flame,
   Leaf,
   Recycle,
-  Trash2,
   Truck,
   Zap,
 } from "lucide-react";
@@ -71,11 +70,6 @@ export function Dashboard() {
       label: "Hotels Connected",
       value: s ? String(s.hotels_connected) : "—",
       icon: Building2,
-    },
-    {
-      label: "Bins Online",
-      value: s ? `${s.online_bins} / ${s.total_bins}` : "—",
-      icon: Trash2,
     },
     {
       label: "Open Alerts",

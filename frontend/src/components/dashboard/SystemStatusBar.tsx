@@ -1,4 +1,4 @@
-import { Bot, Radio, Wifi } from "lucide-react";
+import { Bot, Wifi } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,7 +20,6 @@ export function SystemStatusBar({ system, loading }: SystemStatusBarProps) {
   const items = system
     ? [
         { icon: Bot, label: "AI Service", value: system.ai },
-        { icon: Radio, label: "MQTT", value: system.mqtt },
         {
           icon: Wifi,
           label: "WebSocket",
