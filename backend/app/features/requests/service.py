@@ -17,7 +17,10 @@ from app.features.auth.models import User, UserRole
 from app.features.hotels.repository import HotelRepository
 from app.features.notifications.models import Notification
 from app.features.notifications.service import NotificationService
-from app.features.requests.ai_stub import AIScorer, default_scorer
+from app.features.requests.data_provider import (
+    RequestDataProvider,
+    default_provider,
+)
 from app.features.requests.models import AIStatus, CollectionRequest
 from app.features.requests.repository import RequestRepository
 from app.features.requests.schemas import (
@@ -42,13 +45,19 @@ _OPERATOR_TRANSITIONS = frozenset(
 
 
 class RequestService:
-    def __init__(self, db: AsyncSession, scorer: AIScorer = default_scorer) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        data_provider: RequestDataProvider = default_provider,
+    ) -> None:
         self.db = db
         self.requests = RequestRepository(db)
         self.hotels = HotelRepository(db)
         self.activity = ActivityService(db)
         self.notifications = NotificationService(db)
-        self.scorer = scorer
+        # Source of a request's analysis data (weight + AI outputs). Injected so
+        # the business layer stays agnostic to stub vs Firebase (Adapter + DI).
+        self.data_provider = data_provider
 
     async def _make_hotel_notification(
         self, req: CollectionRequest
@@ -189,11 +198,10 @@ class RequestService:
         )
         req = await self.requests.add(req)
 
-        # Score synchronously via the (stub) scorer so the operator queue has a
-        # priority immediately. When the real HTTP AI is wired, this call moves
-        # to a background task and the request stays PENDING/ai_status=pending
-        # until the result arrives.
-        await self._apply_ai_scoring(req)
+        # Pull analysis data from the provider (stub today, Firebase later) so
+        # the operator queue has a priority immediately. Behind the interface,
+        # so the business layer is agnostic to the source.
+        await self._apply_analysis(req)
 
         await self.activity.record(
             action="request.created",
@@ -206,13 +214,14 @@ class RequestService:
         await self.db.refresh(req)
         return req
 
-    async def _apply_ai_scoring(self, req: CollectionRequest) -> None:
-        """Populate AI fields from the scorer; never fail request creation on AI."""
+    async def _apply_analysis(self, req: CollectionRequest) -> None:
+        """Fill AI fields from the data provider; never fail creation on a
+        provider error (the request is created and marked AI_FAILED instead)."""
         try:
-            result = await self.scorer.score(
+            result = await self.data_provider.get_analysis(
                 request_id=req.id, declared_weight_kg=req.declared_weight_kg
             )
-        except Exception as exc:  # noqa: BLE001 — AI failure must not 500 the create
+        except Exception as exc:  # noqa: BLE001 — provider failure must not 500 the create
             req.ai_status = AIStatus.FAILED
             req.ai_error = str(exc)[:500]
             req.status = RequestStatus.AI_FAILED

@@ -1,8 +1,12 @@
 # Plan — Firebase Integration Layer (biodéchets par device)
 
-> **Statut : PLANIFIÉ, non implémenté.** Ce document fige l'architecture cible.
-> Aucun code Firebase n'existe encore. À implémenter contre un **stub** tant que
-> le contrat de données du Raspberry Pi n'est pas figé.
+> **Statut : PLANIFIÉ, reporté.** Ce document fige l'architecture cible.
+> Décision (2026-07-08) : on termine d'abord la couche métier ; Firebase viendra
+> après. L'**abstraction est déjà en place** — le métier passe par l'interface
+> `RequestDataProvider` (voir `features/requests/data_provider.py`), avec
+> aujourd'hui `StubRequestDataProvider` injecté par DI. Implémenter Firebase =
+> ajouter `FirebaseRealtimeReader` et changer une ligne dans
+> `dependencies.get_data_provider`. Aucun code métier ne changera.
 
 ## 1. Contexte & changement de modèle
 
@@ -57,13 +61,19 @@ vit uniquement dans PostgreSQL (source de vérité applicative).
 ## 3. Structure de fichiers cible
 
 ```
-backend/app/integrations/firebase/
+backend/app/features/requests/
+└── data_provider.py  # ALREADY EXISTS: RequestDataProvider (Protocol) + StubRequestDataProvider
+
+backend/app/integrations/firebase/   # TO ADD when Firebase lands
 ├── __init__.py
-├── client.py         # FirebaseReader (Protocol) + FirebaseRESTReader (vrai client, read-only)
-├── stub.py           # StubFirebaseReader — lectures déterministes locales (dev/tests)
+├── reader.py         # FirebaseRealtimeReader — implements RequestDataProvider, read-only
 ├── schemas.py        # DeviceReading (DTO normalisé de ce que le Raspberry écrit)
 └── config.py         # settings Firebase (URL, credentials) — via env, jamais commit
 ```
+
+> L'interface s'appelle `RequestDataProvider` dans le code (pas `FirebaseReader`)
+> pour ne pas coupler le nom du contrat à une techno. Le futur
+> `FirebaseRealtimeReader` l'implémente.
 
 Modèle : ajouter **`firebase_device_id`** (nullable, unique) sur `Hotel`
 (migration dédiée). Mapping hôtel → device.
