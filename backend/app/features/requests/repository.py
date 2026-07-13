@@ -35,15 +35,18 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         status: RequestStatus | None = None,
         hotel_id: uuid.UUID | None = None,
     ) -> tuple[Sequence[CollectionRequest], int]:
-        """List requests ordered as the operator queue, by an EXPLAINABLE rule.
+        """List requests ordered as the operator queue, by the business rules.
 
-        Ordering (deliberately not the opaque AI priority score, so an operator
-        can see *why* a request tops the queue):
-          1. ai_quality_score DESC, NULLS LAST — best-quality feedstock first;
-             un-scored requests never jump ahead.
-          2. distance_to_plant_km ASC, NULLS LAST — tiebreak on proximity to the
-             plant (shorter haul first); requests with no known distance last.
-          3. created_at DESC — final, deterministic tiebreak (newest first).
+        AI provides the ranking; the operator always has the final decision. The
+        five ordering keys, in priority order:
+          1. ai_priority_score  DESC, NULLS LAST — the AI's recommended order.
+          2. ai_quality_score   DESC, NULLS LAST — better feedstock next.
+          3. distance_to_plant_km ASC, NULLS LAST — shorter haul to the plant.
+          4. declared_weight_kg DESC — larger loads first.
+          5. created_at         ASC  — oldest first (FIFO), deterministic.
+
+        NULLS LAST on the AI keys keeps not-yet-analyzed requests (no Firebase
+        result yet) from jumping the queue; the non-AI keys still order them.
         """
         filters = self._build_filters(status=status, hotel_id=hotel_id)
 
@@ -53,9 +56,11 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         if filters:
             stmt = stmt.where(*filters)
         stmt = stmt.order_by(
+            CollectionRequest.ai_priority_score.desc().nulls_last(),
             CollectionRequest.ai_quality_score.desc().nulls_last(),
             CollectionRequest.distance_to_plant_km.asc().nulls_last(),
-            CollectionRequest.created_at.desc(),
+            CollectionRequest.declared_weight_kg.desc(),
+            CollectionRequest.created_at.asc(),
         )
         stmt = stmt.offset(params.offset).limit(params.limit)
         result = await self.db.execute(stmt)

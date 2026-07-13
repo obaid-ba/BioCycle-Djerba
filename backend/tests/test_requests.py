@@ -87,37 +87,85 @@ async def test_manager_without_hotel_cannot_create(
 # --------------------------------------------------------------------------- #
 # Operator queue: priority sort + scoping
 # --------------------------------------------------------------------------- #
-async def test_queue_sorted_by_quality_then_distance(
+async def test_queue_sorted_by_priority_first(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
     auth_headers: Callable,
 ) -> None:
-    """Explainable ordering: quality DESC first, distance ASC as the tiebreak.
-
-    We verify the two keys are consistent with the returned order: quality is
-    non-increasing, and within an equal-quality run distance is non-decreasing.
-    """
+    """Primary key is the AI priority score (DESC). The stub scores every
+    request, so priority must be non-increasing down the returned queue."""
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    for w in (50, 400, 150, 500):
+    for w in (50, 400, 150, 500, 250):
         await client.post("/api/requests", headers=headers, json={"declared_weight_kg": w})
 
     op_headers = await auth_headers(UserRole.OPERATOR)
     resp = await client.get("/api/requests", headers=op_headers)
 
     assert resp.status_code == 200
-    items = resp.json()["items"]
+    priorities = [i["ai_priority_score"] for i in resp.json()["items"]]
+    non_null = [p for p in priorities if p is not None]
+    assert non_null == sorted(non_null, reverse=True), priorities
 
-    # Primary key: quality non-increasing (NULLs, if any, sort last).
-    qualities = [i["ai_quality_score"] for i in items]
-    non_null = [q for q in qualities if q is not None]
-    assert non_null == sorted(non_null, reverse=True), qualities
 
-    # Tiebreak: within an equal-quality run, distance is non-decreasing.
-    for a, b in zip(items, items[1:]):
-        if a["ai_quality_score"] == b["ai_quality_score"]:
-            da = a["distance_to_plant_km"]
-            db = b["distance_to_plant_km"]
-            if da is not None and db is not None:
-                assert da <= db, (da, db)
+async def test_queue_five_key_ordering_is_exact(
+    client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
+    auth_headers: Callable, session_factory,
+) -> None:
+    """Deterministically verify all five ordering keys and their precedence by
+    inserting requests with crafted values, then asserting the exact order:
+      priority DESC > quality DESC > distance ASC > weight DESC > created_at ASC.
+    """
+    import uuid
+    from datetime import datetime, timedelta, timezone
+
+    from app.features.hotels.models import Hotel, HotelStatus
+    from app.features.requests.models import AIStatus, CollectionRequest
+    from app.features.requests.state_machine import RequestStatus
+
+    mgr = await make_user(email="five@test.io", role=UserRole.HOTEL_MANAGER)
+    base = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    # Each row isolates ONE tiebreak by holding the higher keys equal.
+    # id -> (priority, quality, distance, weight, created_offset_days)
+    rows = {
+        "A": (90, 50, 100, 100, 0),   # top: highest priority
+        "B": (80, 99, 100, 100, 0),   # priority beats quality
+        "C": (80, 50, 5, 100, 0),     # same P<B; lower quality but closer... but quality outranks distance
+        "D": (80, 50, 50, 100, 0),    # same P & quality as C; farther -> after C
+        "E": (80, 50, 50, 999, 0),    # same P/quality/distance as D; heavier -> before D
+        "F": (80, 50, 50, 100, 5),    # same as D but newer -> after D (FIFO: older first)
+        "G": (80, 50, 50, 100, 1),    # same as D but between D(0) and F(5)
+    }
+    async with session_factory() as s:
+        hotel = Hotel(name="Five Hotel", city="Djerba", status=HotelStatus.ACTIVE, manager_id=mgr.id)
+        s.add(hotel)
+        await s.flush()
+        for code, (p, q, dist, w, off) in rows.items():
+            s.add(
+                CollectionRequest(
+                    id=uuid.uuid4(),
+                    hotel_id=hotel.id,
+                    status=RequestStatus.PENDING,
+                    ai_status=AIStatus.SUCCESS,
+                    declared_weight_kg=w,
+                    ai_priority_score=p,
+                    ai_quality_score=q,
+                    distance_to_plant_km=dist,
+                    created_at=base + timedelta(days=off),
+                    operator_notes=code,  # tag so we can read the order back
+                )
+            )
+        await s.commit()
+
+    op = await auth_headers(UserRole.OPERATOR)
+    items = (await client.get("/api/requests?page_size=50", headers=op)).json()["items"]
+    order = [i["operator_notes"] for i in items if i["operator_notes"] in rows]
+
+    # Expected precedence:
+    #  A (P90) first; then P80 group ordered by quality: B (q99) before the rest;
+    #  within q50/P80: distance asc -> C(5) before {D,E,F,G at 50};
+    #  at distance 50: weight desc -> E(999) first; then among weight 100:
+    #  FIFO by created_at -> D(day0), G(day1), F(day5).
+    assert order == ["A", "B", "C", "E", "D", "G", "F"], order
 
 
 async def test_distance_tiebreak_orders_closer_hotel_first(
