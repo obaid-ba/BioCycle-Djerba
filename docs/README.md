@@ -33,6 +33,7 @@ techniquement. Le dossier couvre à la fois :
 | 7 | API Contract | [07-api-contract.md](07-api-contract.md) | ⬜ À venir |
 | 8 | Architecture des microservices | [08-microservices.md](08-microservices.md) | ⬜ À venir |
 | 9 | Plan de développement Sprint par Sprint | [09-roadmap-sprints.md](09-roadmap-sprints.md) | ⬜ À venir |
+| 10 | Plan Firebase Integration Layer | [10-firebase-integration-plan.md](10-firebase-integration-plan.md) | 📋 Planifié |
 
 ## Conventions du dossier
 
