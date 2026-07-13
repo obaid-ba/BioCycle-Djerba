@@ -1,9 +1,9 @@
 import {
   Bell,
   Building2,
+  ClipboardList,
   LayoutDashboard,
   MapPin,
-  Trash2,
   Truck,
   Users,
   type LucideIcon,
@@ -22,8 +22,8 @@ export interface NavItem {
 /** Single source of truth for the sidebar. Order here is the display order. */
 export const navItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/requests", label: "Requests", icon: ClipboardList },
   { to: "/hotels", label: "Hotels", icon: Building2 },
-  { to: "/bins", label: "Smart Bins", icon: Trash2 },
   { to: "/map", label: "Map", icon: MapPin },
   { to: "/collections", label: "Collections", icon: Truck },
   { to: "/alerts", label: "Alerts", icon: Bell },

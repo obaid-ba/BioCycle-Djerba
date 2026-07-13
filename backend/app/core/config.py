@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str = "changeme123"
     FIRST_SUPERUSER_NAME: str = "BioCycle Admin"
 
-    # ---- MQTT (Phase 4) ----
-    MQTT_ENABLED: bool = True
+    # ---- MQTT (Phase 4) — disabled by default: Smart Bins / IoT removed from product ----
+    MQTT_ENABLED: bool = False
     MQTT_HOST: str = "localhost"
     MQTT_PORT: int = 1883
     MQTT_USERNAME: str = ""

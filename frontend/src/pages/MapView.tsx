@@ -1,24 +1,22 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { Building2, Trash2 } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useMemo } from "react";
 import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
 
 import { PageToolbar } from "@/components/common/PageToolbar";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { useBins } from "@/hooks/useBins";
 import { useHotels } from "@/hooks/useHotels";
-import { binStatusVariant, hotelStatusVariant, humanize } from "@/lib/statusBadge";
+import { hotelStatusVariant, humanize } from "@/lib/statusBadge";
 
 // Djerba island centre — sensible default view.
 const DJERBA_CENTER: [number, number] = [33.807, 10.845];
 
 /**
  * CSS-based marker so we don't depend on Leaflet's default PNG icons (whose
- * bundler-broken image paths are a well-known footgun). Color encodes kind:
- * primary = hotel, amber = bin.
+ * bundler-broken image paths are a well-known footgun).
  */
 function dotIcon(color: string): L.DivIcon {
   return L.divIcon({
@@ -30,37 +28,27 @@ function dotIcon(color: string): L.DivIcon {
 }
 
 const hotelIcon = dotIcon("hsl(142 71% 40%)");
-const binIcon = dotIcon("hsl(38 92% 50%)");
 
 export function MapView() {
   const hotelsQuery = useHotels({ page_size: 100 });
-  const binsQuery = useBins({ page_size: 100 });
 
   const hotels = useMemo(
     () => (hotelsQuery.data?.items ?? []).filter((h) => h.latitude != null && h.longitude != null),
     [hotelsQuery.data],
   );
-  const bins = useMemo(
-    () => (binsQuery.data?.items ?? []).filter((b) => b.latitude != null && b.longitude != null),
-    [binsQuery.data],
-  );
 
-  const placed = hotels.length + bins.length;
+  const placed = hotels.length;
 
   return (
     <div className="space-y-6">
       <PageToolbar
         title="Map"
-        description="Geographic view of hotels and smart bins across Djerba."
+        description="Geographic view of hotels across Djerba."
       >
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="flex items-center gap-1.5">
             <span className="size-3 rounded-full" style={{ background: "hsl(142 71% 40%)" }} />
             Hotels ({hotels.length})
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span className="size-3 rounded-full" style={{ background: "hsl(38 92% 50%)" }} />
-            Bins ({bins.length})
           </span>
         </div>
       </PageToolbar>
@@ -70,8 +58,8 @@ export function MapView() {
           <div className="flex h-[60vh] flex-col items-center justify-center gap-2 text-center">
             <Building2 className="size-6 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              No hotels or bins have coordinates yet. Add latitude/longitude to
-              see them here.
+              No hotels have coordinates yet. Add latitude/longitude to see them
+              here.
             </p>
           </div>
         ) : (
@@ -97,24 +85,6 @@ export function MapView() {
                     </p>
                     <Badge variant={hotelStatusVariant[h.status]}>
                       {humanize(h.status)}
-                    </Badge>
-                  </div>
-                </Popup>
-              </Marker>
-            ))}
-            {bins.map((b) => (
-              <Marker key={b.id} position={[b.latitude!, b.longitude!]} icon={binIcon}>
-                <Popup>
-                  <div className="space-y-1">
-                    <p className="flex items-center gap-1.5 font-semibold">
-                      <Trash2 className="size-3.5" /> {b.code}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {humanize(b.bin_type)} ·{" "}
-                      {b.fill_level != null ? `${b.fill_level.toFixed(0)}% full` : "no reading"}
-                    </p>
-                    <Badge variant={binStatusVariant[b.status]}>
-                      {humanize(b.status)}
                     </Badge>
                   </div>
                 </Popup>
