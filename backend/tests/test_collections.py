@@ -1,8 +1,16 @@
-"""Waste collection + AI prediction integration tests (AI client is mocked)."""
+"""Waste collection + AI prediction integration tests (AI client is mocked).
 
-from collections.abc import Callable
+SKIPPED: the /collections API was unmounted (superseded by Collection Requests,
+Lot A). Feature code kept but not exposed; re-enable or delete with the feature.
+"""
 
-from httpx import AsyncClient
+import pytest
+
+pytestmark = pytest.mark.skip(reason="/collections API unmounted (superseded by requests)")
+
+from collections.abc import Callable  # noqa: E402
+
+from httpx import AsyncClient  # noqa: E402
 
 from app.features.auth.models import UserRole
 from app.integrations.ai_service import AIServiceError, get_ai_client

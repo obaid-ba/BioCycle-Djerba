@@ -8,8 +8,15 @@ and fail-fast behavior on misconfiguration.
 
 from functools import lru_cache
 
-from pydantic import PostgresDsn, computed_field
+from pydantic import PostgresDsn, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Known dev placeholders that must never reach production.
+_INSECURE_JWT_SECRETS = {
+    "change-me",
+    "change-me-in-production-use-a-long-random-string",
+}
+_INSECURE_PASSWORDS = {"changeme123", "biocycle"}
 
 
 class Settings(BaseSettings):
@@ -101,6 +108,31 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() in {"production", "prod"}
+
+    @model_validator(mode="after")
+    def _forbid_dev_defaults_in_production(self) -> "Settings":
+        """Fail fast if production still carries dev placeholder secrets.
+
+        Better a refused boot than a live deployment signing tokens with a
+        publicly-known key or shipping the default admin password.
+        """
+        if not self.is_production:
+            return self
+
+        problems: list[str] = []
+        if self.JWT_SECRET_KEY in _INSECURE_JWT_SECRETS:
+            problems.append("JWT_SECRET_KEY is a known default")
+        if self.FIRST_SUPERUSER_PASSWORD in _INSECURE_PASSWORDS:
+            problems.append("FIRST_SUPERUSER_PASSWORD is a known default")
+        if self.POSTGRES_PASSWORD in _INSECURE_PASSWORDS:
+            problems.append("POSTGRES_PASSWORD is a known default")
+        if problems:
+            raise ValueError(
+                "Insecure configuration for a production environment: "
+                + "; ".join(problems)
+                + ". Set strong values via environment variables."
+            )
+        return self
 
 
 @lru_cache

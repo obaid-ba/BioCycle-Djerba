@@ -89,20 +89,6 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
     const handleEvent = (event: RealtimeEvent) => {
       const qc = qcRef.current;
       switch (event.type) {
-        case "bin.reading":
-          qc.invalidateQueries({ queryKey: ["bins"] });
-          qc.invalidateQueries({ queryKey: ["dashboard"] });
-          break;
-        case "alert":
-          qc.invalidateQueries({ queryKey: ["alerts"] });
-          qc.invalidateQueries({ queryKey: ["dashboard"] });
-          // Only announce freshly-raised alerts, not ack/resolve echoes.
-          if (event.data.status === "open") {
-            const msg = `${event.data.severity.toUpperCase()}: ${event.data.title}`;
-            if (event.data.severity === "critical") toastRef.current.error(msg);
-            else toastRef.current.toast(msg, "info");
-          }
-          break;
         case "notification":
           // Targeted to this user by the backend; refresh the bell + toast it.
           qc.invalidateQueries({ queryKey: ["notifications"] });

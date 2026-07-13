@@ -1,11 +1,9 @@
-"""Dashboard & analytics HTTP layer (read-only aggregates + CSV export)."""
+"""Dashboard & analytics HTTP layer (read-only aggregates)."""
 
-import csv
-import io
 from datetime import UTC, datetime, timedelta
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -130,47 +128,5 @@ async def requests_timeseries(
     return await RequestAnalyticsService(db).timeseries(
         current_user, granularity=granularity, date_from=date_from, date_to=date_to
     )
-
-
-@analytics_router.get("/export", summary="Export collections as CSV")
-async def export_collections(
-    current_user: CurrentUser,
-    db: DbSession,
-    date_from: datetime | None = None,
-    date_to: datetime | None = None,
-) -> Response:
-    rows = await AnalyticsService(db).export_rows(current_user, date_from, date_to)
-
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(
-        [
-            "id",
-            "hotel_id",
-            "bin_id",
-            "collected_at",
-            "organic_weight_kg",
-            "non_organic_weight_kg",
-            "total_weight_kg",
-            "notes",
-        ]
-    )
-    for row in rows:
-        writer.writerow(
-            [
-                row.id,
-                row.hotel_id,
-                row.bin_id or "",
-                row.collected_at.isoformat(),
-                row.organic_weight_kg,
-                row.non_organic_weight_kg,
-                row.organic_weight_kg + row.non_organic_weight_kg,
-                row.notes or "",
-            ]
-        )
-
-    return Response(
-        content=buffer.getvalue(),
-        media_type="text/csv",
-        headers={"Content-Disposition": "attachment; filename=collections.csv"},
-    )
+    # Note: the old /analytics/export (waste_collections CSV) was removed —
+    # superseded by /reports/requests.csv on the current data model.

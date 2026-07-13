@@ -1,10 +1,20 @@
-"""Smart bin + sensor reading integration tests."""
+"""Smart bin + sensor reading integration tests.
 
-from collections.abc import Callable
+SKIPPED: the /bins API was unmounted (Smart Bins removed from the product,
+Lot A). The feature code is kept but no longer exposed, so these HTTP tests
+no longer apply. Re-enable if the API is remounted, or delete alongside the
+feature if it's ever fully removed.
+"""
 
-from httpx import AsyncClient
+import pytest
 
-from app.features.auth.models import UserRole
+pytestmark = pytest.mark.skip(reason="/bins API unmounted (Smart Bins removed from product)")
+
+from collections.abc import Callable  # noqa: E402
+
+from httpx import AsyncClient  # noqa: E402
+
+from app.features.auth.models import UserRole  # noqa: E402
 
 
 async def test_create_bin_as_admin(

@@ -1,8 +1,17 @@
-"""Alert tests: auto-rules engine, dedup, lifecycle, RBAC, scoping."""
+"""Alert tests: auto-rules engine, dedup, lifecycle, RBAC, scoping.
 
-from collections.abc import Callable
+SKIPPED: the /alerts API was unmounted (alerts were driven by bin sensor
+telemetry, which is removed; MQTT disabled — no alert can be raised, Lot A).
+Feature code kept but not exposed; re-enable or delete with the feature.
+"""
 
-from httpx import AsyncClient
+import pytest
+
+pytestmark = pytest.mark.skip(reason="/alerts API unmounted (bin-telemetry source removed)")
+
+from collections.abc import Callable  # noqa: E402
+
+from httpx import AsyncClient  # noqa: E402
 
 from app.features.auth.models import UserRole
 

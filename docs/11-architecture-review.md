@@ -57,6 +57,7 @@ terminaux corrects (`rejected`, `completed`). ✅
 | Enveloppe d'erreur unique | 🟢 | `{error:{code,message,details}}` via handlers globaux ; 401/403/404/409/422/500 mappés depuis `AppException`. ✅ Excellent. |
 | Pagination standard | 🟢 | `Page[T]` + `PaginationParams` (page/page_size, bornes). ✅ |
 | **Surface API obsolète exposée** | 🔴 | `bins`, `collections`, `alerts` sont **toujours montés** (api/router.py:33-35) alors qu'ils sont retirés du produit. Ils exposent des endpoints publics sans usage, augmentent la surface d'attaque et polluent l'OpenAPI. À **démonter** du router (garder le code si voulu). |
+| **Page Alerts « zombie »** (correction post-audit) | 🔴 | La page **Alerts est encore dans la nav ET routée** (contrairement à bins, retiré de la nav). Mais son unique déclencheur est `evaluate_for_reading(SensorReading)` via MQTT — capteurs de bennes retirés + MQTT désactivé → **aucune alerte ne peut plus être créée**. Menu vivant mais vide/trompeur. À retirer (nav + route + API + event realtime `alert`). Décision utilisateur : **retirer**. |
 | **Double export CSV divergent** | 🟠 | `/analytics/export` (ancien, basé `waste_collections`) coexiste avec `/reports/requests.csv` (nouveau). Le premier renvoie des données mortes. Retirer l'ancien. |
 | Statuts HTTP | 🟢 | 201 sur création, 204 sur delete/read-all, 409 sur transition illégale, 413/422 sur upload. Cohérent. ✅ |
 | `RequestValidationError` fuit `exc.errors()` | 🟢 | Les `details` renvoient la structure interne Pydantic (chemins de champs). Acceptable en interne ; à filtrer si l'API devient publique. |
@@ -236,10 +237,12 @@ Déclencheurs actuels (→ **hôtel** uniquement) : `accepted`, `rejected`,
 
 ## Plan de remédiation proposé (après validation)
 
-**Lot A — Production-readiness (🔴, à faire avant prod)**
-1. Refuser au démarrage les secrets par défaut si `ENVIRONMENT=production`.
-2. Démonter les routers obsolètes (`bins`, `collections`, `alerts`) + retirer `/analytics/export`.
-3. Supprimer le code mort frontend bins + nettoyer le seed.
+**Lot A — Production-readiness (🔴) — ✅ FAIT (2026-07-08)**
+1. ✅ Refuser au démarrage les secrets par défaut si `ENVIRONMENT=production` (`config.py` model_validator).
+2. ✅ Démonter les routers obsolètes (`bins`, `collections`, `alerts`) + retirer `/analytics/export`. Page Alerts retirée du front (nav + route + event realtime).
+3. ✅ Supprimer le code mort frontend bins (pages/hooks/services/components). *(Nettoyage du seed : reste à faire.)*
+   - Code backend conservé (démonté, non supprimé) ; tests de la surface obsolète marqués `skip` (94 passent, 38 skippés).
+   - **Découvert en passant :** l'ancien `/dashboard/stats` + `/analytics/{waste-distribution,timeseries}` (basés `waste_collections`) sont aussi obsolètes — le dashboard produit utilise `request-stats`. `/dashboard/stats` sert encore le `SystemStatusBar` (AI/WS). À trancher : reconstruire le SystemStatus autrement puis démonter, ou laisser.
 
 **Lot B — Robustesse métier (🟠)**
 4. Statut `CANCELLED` + annulation hôtel.

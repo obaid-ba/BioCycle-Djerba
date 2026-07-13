@@ -21,7 +21,6 @@ const MapView = lazy(() =>
 const Collections = lazy(() =>
   import("@/pages/Collections").then((m) => ({ default: m.Collections })),
 );
-const Alerts = lazy(() => import("@/pages/Alerts").then((m) => ({ default: m.Alerts })));
 const Reports = lazy(() =>
   import("@/pages/Reports").then((m) => ({ default: m.Reports })),
 );
@@ -53,7 +52,6 @@ export default function App() {
           <Route path="/hotels" element={<Hotels />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/collections" element={<Collections />} />
-          <Route path="/alerts" element={<Alerts />} />
           <Route path="/reports" element={<Reports />} />
           <Route
             path="/users"

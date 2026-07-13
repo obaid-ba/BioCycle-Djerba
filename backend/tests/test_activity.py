@@ -2,9 +2,14 @@
 
 from collections.abc import Callable
 
+import pytest
 from httpx import AsyncClient
 
 from app.features.auth.models import UserRole
+
+# Some audit tests exercise the /collections and /alerts APIs, now unmounted
+# (Lot A). The audit mechanism itself is still covered by the request/hotel tests.
+_OBSOLETE_SURFACE = pytest.mark.skip(reason="exercises /collections or /alerts API (unmounted)")
 
 
 async def test_hotel_creation_is_audited(client: AsyncClient, auth_headers: Callable) -> None:
@@ -18,6 +23,7 @@ async def test_hotel_creation_is_audited(client: AsyncClient, auth_headers: Call
     assert "hotel.created" in actions
 
 
+@_OBSOLETE_SURFACE
 async def test_collection_creation_is_audited(
     client: AsyncClient, make_hotel: Callable, auth_headers: Callable
 ) -> None:
@@ -39,6 +45,7 @@ async def test_collection_creation_is_audited(
     assert logs["total"] == 1
 
 
+@_OBSOLETE_SURFACE
 async def test_alert_acknowledge_is_audited(
     client: AsyncClient, make_hotel: Callable, make_bin: Callable, auth_headers: Callable
 ) -> None:

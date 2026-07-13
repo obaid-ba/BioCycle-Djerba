@@ -1,11 +1,19 @@
-"""Dashboard stats & analytics tests."""
+"""Dashboard stats & analytics tests (LEGACY, waste_collections-based).
+
+SKIPPED: this whole module targets the old dashboard/analytics surface built
+on waste_collections (fed via the now-unmounted /collections API). The current,
+request-centric analytics are covered by test_request_analytics.py.
+"""
 
 from collections.abc import Callable
 
+import pytest
 from httpx import AsyncClient
 
 from app.features.auth.models import UserRole
 from app.integrations.ai_service import get_ai_client
+
+pytestmark = pytest.mark.skip(reason="legacy waste_collections analytics; see test_request_analytics.py")
 from app.main import app
 
 
