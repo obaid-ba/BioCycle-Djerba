@@ -2,6 +2,7 @@ import {
   Bell,
   Building2,
   ClipboardList,
+  FileText,
   LayoutDashboard,
   MapPin,
   Truck,
@@ -27,6 +28,7 @@ export const navItems: NavItem[] = [
   { to: "/map", label: "Map", icon: MapPin },
   { to: "/collections", label: "Collections", icon: Truck },
   { to: "/alerts", label: "Alerts", icon: Bell },
+  { to: "/reports", label: "Reports", icon: FileText },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
 ];
 

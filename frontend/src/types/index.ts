@@ -396,3 +396,31 @@ export interface NotificationEvent {
     created_at: string | null;
   };
 }
+
+// ---- Reports ----
+export interface ReportSummary {
+  period: { date_from: string; date_to: string };
+  totals: {
+    requests: number;
+    declared_weight_kg: number;
+    collected_weight_kg: number;
+    estimated_methane_m3: number;
+    estimated_energy_kwh: number;
+    estimated_co2_kg: number;
+  };
+  status_counts: Record<RequestStatus, number>;
+  avg_quality_score: number | null;
+  acceptance_rate: number | null;
+  top_hotels: {
+    hotel_name: string;
+    request_count: number;
+    total_methane_m3: number;
+  }[];
+}
+
+export interface ReportFilters {
+  date_from?: string;
+  date_to?: string;
+  status?: RequestStatus;
+  hotel_id?: string;
+}
