@@ -94,6 +94,7 @@ class CollectionRequestRead(BaseSchema):
 
     declared_weight_kg: float
     collected_weight_kg: float | None
+    distance_to_plant_km: float | None
 
     ai_status: AIStatus
     ai_quality_score: float | None

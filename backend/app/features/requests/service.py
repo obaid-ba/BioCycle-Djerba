@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.features.activity.service import ActivityService
 from app.features.auth.models import User, UserRole
 from app.features.hotels.repository import HotelRepository
@@ -28,6 +29,7 @@ from app.features.requests.state_machine import (
     assert_transition_allowed,
 )
 from app.shared.exceptions import ForbiddenError, NotFoundError, ValidationError
+from app.shared.geo import haversine_km
 from app.shared.schemas import Page, PaginationParams
 
 # Transitions an operator may drive directly via the /transition endpoint.
@@ -50,6 +52,23 @@ class RequestService:
     def _hotel_scope(user: User) -> uuid.UUID | None:
         """Hotel managers see only their own requests; operators/admins see all."""
         return user.id if user.role == UserRole.HOTEL_MANAGER else None
+
+    @staticmethod
+    def _distance_to_plant(hotel) -> float | None:
+        """Straight-line km from the hotel to the plant, or None if the hotel has
+        no coordinates. Snapshotted onto the request so the operator queue can
+        rank by proximity and show why."""
+        if hotel is None or hotel.latitude is None or hotel.longitude is None:
+            return None
+        return round(
+            haversine_km(
+                hotel.latitude,
+                hotel.longitude,
+                settings.PLANT_LATITUDE,
+                settings.PLANT_LONGITUDE,
+            ),
+            2,
+        )
 
     async def _resolve_hotel_for_manager(
         self, user: User, hotel_id: uuid.UUID | None
@@ -136,13 +155,15 @@ class RequestService:
         user: User,
         hotel_id: uuid.UUID | None = None,
     ) -> CollectionRequest:
-        target_hotel = await self._resolve_hotel_for_manager(user, hotel_id)
+        target_hotel_id = await self._resolve_hotel_for_manager(user, hotel_id)
+        hotel = await self.hotels.get(target_hotel_id)
 
         req = CollectionRequest(
-            hotel_id=target_hotel,
+            hotel_id=target_hotel_id,
             declared_weight_kg=data.declared_weight_kg,
             status=RequestStatus.PENDING,
             ai_status=AIStatus.PENDING,
+            distance_to_plant_km=self._distance_to_plant(hotel),
         )
         req = await self.requests.add(req)
 

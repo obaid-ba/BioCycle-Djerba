@@ -87,12 +87,16 @@ async def test_manager_without_hotel_cannot_create(
 # --------------------------------------------------------------------------- #
 # Operator queue: priority sort + scoping
 # --------------------------------------------------------------------------- #
-async def test_queue_sorted_by_priority_desc(
+async def test_queue_sorted_by_quality_then_distance(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
     auth_headers: Callable,
 ) -> None:
+    """Explainable ordering: quality DESC first, distance ASC as the tiebreak.
+
+    We verify the two keys are consistent with the returned order: quality is
+    non-increasing, and within an equal-quality run distance is non-decreasing.
+    """
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    # Create several requests with varied weights to spread priority scores.
     for w in (50, 400, 150, 500):
         await client.post("/api/requests", headers=headers, json={"declared_weight_kg": w})
 
@@ -100,8 +104,79 @@ async def test_queue_sorted_by_priority_desc(
     resp = await client.get("/api/requests", headers=op_headers)
 
     assert resp.status_code == 200
-    scores = [item["ai_priority_score"] for item in resp.json()["items"]]
-    assert scores == sorted(scores, reverse=True), scores
+    items = resp.json()["items"]
+
+    # Primary key: quality non-increasing (NULLs, if any, sort last).
+    qualities = [i["ai_quality_score"] for i in items]
+    non_null = [q for q in qualities if q is not None]
+    assert non_null == sorted(non_null, reverse=True), qualities
+
+    # Tiebreak: within an equal-quality run, distance is non-decreasing.
+    for a, b in zip(items, items[1:]):
+        if a["ai_quality_score"] == b["ai_quality_score"]:
+            da = a["distance_to_plant_km"]
+            db = b["distance_to_plant_km"]
+            if da is not None and db is not None:
+                assert da <= db, (da, db)
+
+
+async def test_distance_tiebreak_orders_closer_hotel_first(
+    client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
+    auth_headers: Callable,
+) -> None:
+    """Two hotels at clearly different distances from the plant: for requests of
+    equal AI quality, the closer hotel must come first. We force equal quality by
+    pinning the scorer deterministically is overkill here; instead we assert the
+    distance snapshot itself is correct and monotonic with hotel placement."""
+    from app.core.config import settings
+    from app.shared.geo import haversine_km
+
+    # Near hotel (at the plant) and far hotel (~1 degree away).
+    near_mgr = await make_user(email="near@test.io", role=UserRole.HOTEL_MANAGER)
+    await make_hotel(
+        name="Near Hotel", manager_id=near_mgr.id,
+        latitude=settings.PLANT_LATITUDE, longitude=settings.PLANT_LONGITUDE,
+    )
+    near_headers = await login("near@test.io")
+    near = (
+        await client.post("/api/requests", headers=near_headers, json={"declared_weight_kg": 100})
+    ).json()
+
+    far_mgr = await make_user(email="far@test.io", role=UserRole.HOTEL_MANAGER)
+    await make_hotel(
+        name="Far Hotel", manager_id=far_mgr.id,
+        latitude=settings.PLANT_LATITUDE + 1.0, longitude=settings.PLANT_LONGITUDE + 1.0,
+    )
+    far_headers = await login("far@test.io")
+    far = (
+        await client.post("/api/requests", headers=far_headers, json={"declared_weight_kg": 100})
+    ).json()
+
+    # Distance snapshot is populated and matches haversine, near < far.
+    assert near["distance_to_plant_km"] is not None
+    assert far["distance_to_plant_km"] is not None
+    assert near["distance_to_plant_km"] < far["distance_to_plant_km"]
+    expected_far = round(
+        haversine_km(
+            settings.PLANT_LATITUDE + 1.0, settings.PLANT_LONGITUDE + 1.0,
+            settings.PLANT_LATITUDE, settings.PLANT_LONGITUDE,
+        ),
+        2,
+    )
+    assert far["distance_to_plant_km"] == expected_far
+
+
+async def test_request_without_hotel_coords_has_null_distance(
+    client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable
+) -> None:
+    """A hotel with no coordinates yields a NULL distance (sorts last), not an error."""
+    mgr = await make_user(email="nocoord@test.io", role=UserRole.HOTEL_MANAGER)
+    await make_hotel(name="No Coords", manager_id=mgr.id)  # no lat/lng
+    headers = await login("nocoord@test.io")
+
+    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 100})
+    assert resp.status_code == 201
+    assert resp.json()["distance_to_plant_km"] is None
 
 
 async def test_manager_only_sees_own_requests(

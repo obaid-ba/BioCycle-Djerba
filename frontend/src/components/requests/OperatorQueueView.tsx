@@ -46,6 +46,7 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
 
   const requests = query.data?.items ?? [];
   const colSpan = readOnly ? 7 : 8;
+  // Columns: Quality, Distance, Created, Declared, Purity, Methane, Status (+Actions)
 
   return (
     <div className="space-y-6">
@@ -73,10 +74,10 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Priority</TableHead>
+              <TableHead>Quality</TableHead>
+              <TableHead>Distance</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Declared</TableHead>
-              <TableHead>Quality</TableHead>
               <TableHead>Purity</TableHead>
               <TableHead>Est. methane</TableHead>
               <TableHead>Status</TableHead>
@@ -97,22 +98,24 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
               requests.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell>
-                    {r.ai_priority_score != null ? (
+                    {r.ai_quality_score != null ? (
                       <Badge variant="default" className="tabular-nums">
-                        {r.ai_priority_score.toFixed(0)}
+                        {r.ai_quality_score.toFixed(0)}
                       </Badge>
                     ) : (
                       "—"
                     )}
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {r.distance_to_plant_km != null
+                      ? `${r.distance_to_plant_km.toFixed(1)} km`
+                      : "—"}
                   </TableCell>
                   <TableCell className="whitespace-nowrap font-medium">
                     {formatDateTime(r.created_at)}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {formatKg(r.declared_weight_kg)}
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {r.ai_quality_score != null ? r.ai_quality_score.toFixed(0) : "—"}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.ai_organic_purity != null

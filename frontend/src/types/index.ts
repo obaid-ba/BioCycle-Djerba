@@ -284,6 +284,7 @@ export interface CollectionRequest {
 
   declared_weight_kg: number;
   collected_weight_kg: number | null;
+  distance_to_plant_km: number | null;
 
   ai_status: RequestAIStatus;
   ai_quality_score: number | null;

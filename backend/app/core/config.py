@@ -64,6 +64,13 @@ class Settings(BaseSettings):
     ALERT_FILL_CRITICAL: float = 95.0
     ALERT_BATTERY_THRESHOLD: float = 15.0
 
+    # ---- Biomethanization plant location (Djerba) ----
+    # Used as the fixed reference point for the operator-queue distance tiebreak
+    # (hotel -> plant, straight-line/haversine). Approximate Djerba coordinates;
+    # override with the real site position via env.
+    PLANT_LATITUDE: float = 33.8076
+    PLANT_LONGITUDE: float = 10.8451
+
     @computed_field
     @property
     def DATABASE_URL(self) -> str:  # noqa: N802 (settings-style constant name)

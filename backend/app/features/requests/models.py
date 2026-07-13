@@ -61,6 +61,12 @@ class CollectionRequest(Base, UUIDMixin, TimestampMixin):
     # Captured by the operator at the COLLECTED step (real weight on the truck).
     collected_weight_kg: Mapped[float | None] = mapped_column(Float)
 
+    # Straight-line distance hotel -> plant, snapshotted at creation from the
+    # hotel's coordinates. Drives the operator-queue tiebreak (closest first) and
+    # is shown to the operator so the ordering is explainable. NULL when the
+    # hotel has no coordinates.
+    distance_to_plant_km: Mapped[float | None] = mapped_column(Float, index=True)
+
     # ---- External-AI results (all nullable; filled asynchronously) ----
     ai_status: Mapped[AIStatus] = mapped_column(
         Enum(AIStatus, name="ai_status", values_callable=_enum_values),

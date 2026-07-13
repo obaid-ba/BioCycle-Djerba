@@ -35,21 +35,26 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         status: RequestStatus | None = None,
         hotel_id: uuid.UUID | None = None,
     ) -> tuple[Sequence[CollectionRequest], int]:
-        """List requests ordered as the operator queue: highest AI priority first.
+        """List requests ordered as the operator queue, by an EXPLAINABLE rule.
 
-        Un-scored requests (NULL priority) sort last so they never jump the queue,
-        with newest-first as the tiebreaker.
+        Ordering (deliberately not the opaque AI priority score, so an operator
+        can see *why* a request tops the queue):
+          1. ai_quality_score DESC, NULLS LAST — best-quality feedstock first;
+             un-scored requests never jump ahead.
+          2. distance_to_plant_km ASC, NULLS LAST — tiebreak on proximity to the
+             plant (shorter haul first); requests with no known distance last.
+          3. created_at DESC — final, deterministic tiebreak (newest first).
         """
         filters = self._build_filters(status=status, hotel_id=hotel_id)
 
-        # Two-key ordering (priority desc NULLS LAST, then newest) can't go
-        # through BaseRepository.list(), which takes a single order_by; build the
-        # statement here. count() is still shared.
+        # Multi-key ordering can't go through BaseRepository.list() (single
+        # order_by); build the statement here. count() is still shared.
         stmt = select(CollectionRequest)
         if filters:
             stmt = stmt.where(*filters)
         stmt = stmt.order_by(
-            CollectionRequest.ai_priority_score.desc().nulls_last(),
+            CollectionRequest.ai_quality_score.desc().nulls_last(),
+            CollectionRequest.distance_to_plant_km.asc().nulls_last(),
             CollectionRequest.created_at.desc(),
         )
         stmt = stmt.offset(params.offset).limit(params.limit)
