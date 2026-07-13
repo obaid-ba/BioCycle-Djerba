@@ -6,11 +6,35 @@
 
 ## 1. Contexte & changement de modèle
 
-Révision de la source de la quantité : elle **ne vient plus (uniquement) d'une
-saisie manuelle**. Chaque hôtel dispose d'un **Raspberry Pi** qui pousse ses
-mesures dans **Firebase**. À la création d'une Collection Request, le backend
-doit récupérer **la dernière lecture Firebase** du device de l'hôtel et en faire
-un **snapshot** dans PostgreSQL.
+Révision de la source des données : elles **ne viennent plus d'une saisie
+manuelle**. Chaque hôtel dispose d'un **Raspberry Pi** qui pousse ses **KPI**
+dans **Firebase**. À la création d'une Collection Request, le backend récupère
+**la dernière lecture Firebase** du device de l'hôtel et en fait un **snapshot**
+dans PostgreSQL.
+
+> ⚠️ **Le Raspberry pousse des KPI, JAMAIS d'images.** Les photos restent une
+> chose distincte : l'hôtel les upload manuellement (feature photos déjà en
+> place), indépendamment du Raspberry.
+
+### 1.1. Ce que Firebase contient (contrat cible)
+
+Le Raspberry (et/ou un traitement en amont côté hardware/IA de l'autre équipe)
+écrit dans Firebase **deux catégories** de KPI :
+
+- **Mesures capteurs brutes** : poids (kg), humidité, température, densité… (ce
+  que le capteur relève physiquement).
+- **Scores déjà calculés en amont** : qualité, pureté organique, contamination,
+  méthane estimé, énergie, CO₂, priorité. **Ces scores sont calculés hors de
+  notre backend** (côté device / équipe IA), pas par nous.
+
+**Conséquence architecturale majeure : le backend ne calcule AUCUN score.** Il
+est un **pur lecteur** de Firebase. Il n'y a **pas d'appel à une IA externe côté
+backend** dans le modèle cible.
+
+> 🔻 **Le stub IA (`backend/app/features/requests/ai_stub.py`) devient obsolète**
+> une fois Firebase branché : les scores ne seront plus calculés localement mais
+> lus depuis Firebase. Il est conservé aujourd'hui uniquement pour faire tourner
+> la démo tant que Firebase n'est pas implémenté ; à retirer lors du branchement.
 
 > ⚠️ Ce modèle réintroduit de l'IoT (Raspberry → Firebase), différent de l'IoT
 > MQTT précédemment retiré. Firebase agit comme **buffer découplé** : le backend
@@ -44,16 +68,20 @@ backend/app/integrations/firebase/
 Modèle : ajouter **`firebase_device_id`** (nullable, unique) sur `Hotel`
 (migration dédiée). Mapping hôtel → device.
 
-Snapshot : la Collection Request stocke déjà `declared_weight_kg`. On ajoutera
-la provenance : `source` (`manual` | `firebase`), `firebase_reading_at`
-(horodatage de la lecture d'origine), éventuellement `firebase_raw` (JSONB) pour
-la traçabilité.
+Snapshot : à la création, la Collection Request est renseignée **entièrement
+depuis Firebase** — quantité **et** scores. On ajoutera :
+- `source` (`manual` | `firebase`) : provenance de la donnée,
+- `firebase_reading_at` : horodatage de la lecture d'origine,
+- `firebase_raw` (JSONB) : la lecture brute complète, pour la traçabilité.
+
+Les colonnes `ai_*` existantes (qualité, méthane, priorité…) sont désormais
+**remplies depuis Firebase**, plus par le scorer local.
 
 ## 4. Interface (le point de couture)
 
-Comme pour l'IA (`AIScorer`), on dépend d'une **interface**, pas de Firebase
-directement — le service reste testable et le vrai client est branchable sans
-toucher au métier.
+On dépend d'une **interface**, pas de Firebase directement — le service reste
+testable et le vrai client est branchable sans toucher au métier. Le
+`DeviceReading` porte **KPI bruts + scores** (pas d'images).
 
 ```python
 class FirebaseReader(Protocol):
@@ -61,13 +89,26 @@ class FirebaseReader(Protocol):
 
 class DeviceReading(BaseSchema):
     device_id: str
-    weight_kg: float
     recorded_at: datetime
-    # champs additionnels selon le contrat Raspberry (humidité, etc.) — À FIGER
+    # --- KPI bruts capteurs ---
+    weight_kg: float
+    humidity: float | None = None
+    temperature_c: float | None = None
+    density: float | None = None
+    # --- Scores déjà calculés EN AMONT (pas par notre backend) ---
+    quality_score: float | None = None
+    organic_purity: float | None = None
+    contamination: float | None = None
+    estimated_methane_m3: float | None = None
+    estimated_energy_kwh: float | None = None
+    estimated_co2_kg: float | None = None
+    priority_score: float | None = None
+    # champs exacts À FIGER avec l'équipe hardware/IA (voir §6.1)
 ```
 
 - **`StubFirebaseReader`** : renvoie une lecture déterministe (hash du device_id),
-  comme le stub IA. Utilisé en dev/tests jusqu'à livraison du contrat.
+  bruts + scores plausibles. Utilisé en dev/tests jusqu'à livraison du contrat.
+  Il **remplace** le rôle de l'actuel `ai_stub.py`.
 - **`FirebaseRESTReader`** : lit `GET {FIREBASE_DB_URL}/devices/{device_id}/latest.json`
   (Realtime DB) ou un doc Firestore. **Aucune méthode d'écriture exposée.**
 
@@ -83,21 +124,26 @@ Hotel crée une demande
    │ oui      │ non
    ▼          ▼
 FirebaseReader     Fallback : saisie manuelle
-.latest_reading()  (declared_weight_kg du body)
+.latest_reading()  (declared_weight_kg du body ; scores IA vides)
    │
-   ├─ lecture trouvée → snapshot : declared_weight_kg = reading.weight_kg,
-   │                    source="firebase", firebase_reading_at=reading.recorded_at
+   ├─ lecture trouvée → snapshot COMPLET depuis Firebase :
+   │     • declared_weight_kg = reading.weight_kg
+   │     • ai_quality_score / ai_estimated_methane_m3 / ... = reading.<scores>
+   │     • source="firebase", firebase_reading_at, firebase_raw
    │
    └─ rien / erreur  → selon politique (voir §6)
         │
         ▼
-  suite normale : scoring IA, distance, file opérateur…
+  suite normale : distance, file opérateur…
+  (PAS de scoring local : les scores viennent de Firebase)
 ```
 
 ## 6. Décisions à figer avant implémentation
 
 1. **Contrat de données Raspberry** : chemin exact + schéma du document Firebase
-   (ex. `/devices/{id}/latest = {weight_kg, timestamp, humidity?, …}`). **Bloquant.**
+   — quels champs bruts **et** quels scores, avec leurs noms/unités (ex.
+   `/devices/{id}/latest = {weight_kg, humidity, quality_score, methane_m3, …}`).
+   **Bloquant.**
 2. **Firebase indisponible / device muet** : bloquer la création (erreur) OU
    retomber sur la saisie manuelle ? (recommandé : fallback manuel, non bloquant).
 3. **Fraîcheur** : rejeter une lecture trop ancienne (seuil configurable) ?
@@ -106,14 +152,24 @@ FirebaseReader     Fallback : saisie manuelle
 5. **Manuel vs Firebase** : le champ manuel disparaît-il du formulaire hôtel une
    fois Firebase en place, ou reste-t-il en fallback ? (impacte l'UI).
 
+**Résolu (2026-07-08) :**
+- ✅ **Le Raspberry pousse des KPI, pas d'images.** Les photos restent un upload
+  manuel séparé.
+- ✅ **Firebase contient bruts capteurs ET scores calculés en amont.** Le backend
+  ne calcule aucun score → **pas d'IA côté backend**, `ai_stub.py` à retirer au
+  branchement.
+
 ## 7. Tests prévus
 
 - `StubFirebaseReader` déterministe (unitaire).
-- Création avec device mappé → snapshot correct (weight, source, timestamp).
-- Création sans device → fallback manuel inchangé.
+- Création avec device mappé → snapshot correct : **quantité ET scores** repris
+  de Firebase (weight, quality, methane…), source/timestamp/raw renseignés.
+- Création sans device → fallback manuel inchangé (scores vides).
 - Lecture Firebase absente/en erreur → politique §6.2 respectée (pas de 500).
 - **Garantie read-only** : le client n'expose aucune méthode d'écriture (test
   d'interface / revue).
+- **Non-régression scoring** : vérifier que le backend n'appelle plus le scorer
+  local quand une lecture Firebase est présente.
 
 ## 8. Effort estimé
 
