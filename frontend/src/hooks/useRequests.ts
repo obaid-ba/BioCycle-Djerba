@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createRequest,
   decideRequest,
+  deletePhoto,
   listRequests,
   transitionRequest,
+  uploadPhotos,
   type RequestListParams,
 } from "@/services/requests";
 import type {
@@ -55,6 +57,24 @@ export function useTransitionRequest() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: string; payload: RequestTransition }) =>
       transitionRequest(id, payload),
+    onSuccess: invalidate,
+  });
+}
+
+export function useUploadPhotos() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({ id, files }: { id: string; files: File[] }) =>
+      uploadPhotos(id, files),
+    onSuccess: invalidate,
+  });
+}
+
+export function useDeletePhoto() {
+  const invalidate = useInvalidateRequests();
+  return useMutation({
+    mutationFn: ({ requestId, photoId }: { requestId: string; photoId: string }) =>
+      deletePhoto(requestId, photoId),
     onSuccess: invalidate,
   });
 }

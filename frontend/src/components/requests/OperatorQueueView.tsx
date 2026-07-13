@@ -1,7 +1,10 @@
+import { ImageIcon } from "lucide-react";
 import { useState } from "react";
 
 import { RequestActions } from "@/components/requests/RequestActions";
+import { RequestDetailDialog } from "@/components/requests/RequestDetailDialog";
 import { RequestStatusBadge } from "@/components/requests/RequestStatusBadge";
+import { Button } from "@/components/ui/button";
 import { PageToolbar } from "@/components/common/PageToolbar";
 import { Pagination } from "@/components/common/Pagination";
 import { TableState } from "@/components/common/TableState";
@@ -18,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { useRequests } from "@/hooks/useRequests";
 import { formatDateTime, formatKg } from "@/lib/utils";
-import type { RequestStatus } from "@/types";
+import type { CollectionRequest, RequestStatus } from "@/types";
 
 const STATUS_OPTIONS: { value: "" | RequestStatus; label: string }[] = [
   { value: "", label: "All statuses" },
@@ -38,6 +41,7 @@ const STATUS_OPTIONS: { value: "" | RequestStatus; label: string }[] = [
 export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<"" | RequestStatus>("");
+  const [selected, setSelected] = useState<CollectionRequest | null>(null);
 
   const query = useRequests({
     page,
@@ -128,7 +132,19 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <RequestStatusBadge status={r.status} />
+                    <div className="flex items-center gap-2">
+                      <RequestStatusBadge status={r.status} />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-1.5 text-muted-foreground"
+                        onClick={() => setSelected(r)}
+                        aria-label="View details and photos"
+                      >
+                        <ImageIcon />
+                        {r.photos.length > 0 ? r.photos.length : ""}
+                      </Button>
+                    </div>
                   </TableCell>
                   {!readOnly && (
                     <TableCell className="text-right">
@@ -147,6 +163,15 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
           pages={query.data.pages}
           total={query.data.total}
           onPageChange={setPage}
+        />
+      )}
+
+      {selected && (
+        <RequestDetailDialog
+          open={!!selected}
+          request={selected}
+          canEditPhotos={false}
+          onClose={() => setSelected(null)}
         />
       )}
     </div>

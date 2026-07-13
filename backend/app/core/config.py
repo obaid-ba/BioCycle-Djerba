@@ -64,6 +64,17 @@ class Settings(BaseSettings):
     ALERT_FILL_CRITICAL: float = 95.0
     ALERT_BATTERY_THRESHOLD: float = 15.0
 
+    # ---- Photo uploads (local disk; hackathon — no object storage) ----
+    UPLOAD_DIR: str = "/uploads"
+    MAX_PHOTO_SIZE_MB: int = 10
+    MAX_PHOTOS_PER_REQUEST: int = 5
+    ALLOWED_PHOTO_TYPES: set[str] = {"image/jpeg", "image/png", "image/webp"}
+
+    @computed_field
+    @property
+    def MAX_PHOTO_SIZE_BYTES(self) -> int:  # noqa: N802
+        return self.MAX_PHOTO_SIZE_MB * 1024 * 1024
+
     # ---- Biomethanization plant location (Djerba) ----
     # Used as the fixed reference point for the operator-queue distance tiebreak
     # (hotel -> plant, straight-line/haversine). Approximate Djerba coordinates;
