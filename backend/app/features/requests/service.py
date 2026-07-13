@@ -15,6 +15,8 @@ from app.core.config import settings
 from app.features.activity.service import ActivityService
 from app.features.auth.models import User, UserRole
 from app.features.hotels.repository import HotelRepository
+from app.features.notifications.models import Notification
+from app.features.notifications.service import NotificationService
 from app.features.requests.ai_stub import AIScorer, default_scorer
 from app.features.requests.models import AIStatus, CollectionRequest
 from app.features.requests.repository import RequestRepository
@@ -45,7 +47,27 @@ class RequestService:
         self.requests = RequestRepository(db)
         self.hotels = HotelRepository(db)
         self.activity = ActivityService(db)
+        self.notifications = NotificationService(db)
         self.scorer = scorer
+
+    async def _make_hotel_notification(
+        self, req: CollectionRequest
+    ) -> Notification | None:
+        """Create (flush, no commit) a status-change notification for the hotel.
+
+        The recipient is the hotel's manager. Returns the notification so the
+        caller can push it live after commit, or None if this status isn't one
+        hotels are notified about or the hotel has no manager.
+        """
+        hotel = await self.hotels.get(req.hotel_id)
+        if hotel is None or hotel.manager_id is None:
+            return None
+        return await self.notifications.create_for_request_status(
+            recipient_id=hotel.manager_id,
+            request_id=req.id,
+            status_value=req.status.value,
+            weight_kg=req.declared_weight_kg,
+        )
 
     # ----------------------------------------------------------------- scoping
     @staticmethod
@@ -237,8 +259,11 @@ class RequestService:
             entity_id=req.id,
             message=req.rejection_reason,
         )
+        notification = await self._make_hotel_notification(req)
         await self.db.commit()
         await self.db.refresh(req)
+        if notification is not None:
+            await self.notifications.deliver(notification)
         return req
 
     async def transition(
@@ -275,6 +300,11 @@ class RequestService:
             entity_type="collection_request",
             entity_id=req.id,
         )
+        # Only COMPLETED among the operator transitions notifies the hotel
+        # (create_for_request_status ignores on_the_way/collected).
+        notification = await self._make_hotel_notification(req)
         await self.db.commit()
         await self.db.refresh(req)
+        if notification is not None:
+            await self.notifications.deliver(notification)
         return req

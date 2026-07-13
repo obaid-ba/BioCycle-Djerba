@@ -1,6 +1,7 @@
 import { LogOut, Menu } from "lucide-react";
 
 import { ThemeToggle } from "@/components/common/ThemeToggle";
+import { NotificationBell } from "@/components/layout/NotificationBell";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/auth";
 import { useRealtimeStatus } from "@/context/realtime";
@@ -52,6 +53,8 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           {wsStatus === "open" ? "Live" : wsStatus === "connecting" ? "Connecting" : "Offline"}
         </span>
       </span>
+
+      <NotificationBell />
 
       <ThemeToggle />
 

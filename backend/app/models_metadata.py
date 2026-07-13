@@ -14,6 +14,7 @@ from app.features.collections.models import (  # noqa: F401
     WasteCollection,
 )
 from app.features.hotels.models import Hotel  # noqa: F401
+from app.features.notifications.models import Notification  # noqa: F401
 from app.features.requests.models import (  # noqa: F401
     CollectionRequest,
     RequestPhoto,

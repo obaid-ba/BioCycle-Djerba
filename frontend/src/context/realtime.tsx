@@ -103,6 +103,11 @@ export function RealtimeProvider({ children }: { children: ReactNode }) {
             else toastRef.current.toast(msg, "info");
           }
           break;
+        case "notification":
+          // Targeted to this user by the backend; refresh the bell + toast it.
+          qc.invalidateQueries({ queryKey: ["notifications"] });
+          toastRef.current.toast(event.data.title, "info");
+          break;
         case "connection.ack":
           break;
       }

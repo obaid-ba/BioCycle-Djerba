@@ -220,7 +220,11 @@ export interface ConnectionAckEvent {
   type: "connection.ack";
 }
 
-export type RealtimeEvent = BinReadingEvent | AlertEvent | ConnectionAckEvent;
+export type RealtimeEvent =
+  | BinReadingEvent
+  | AlertEvent
+  | NotificationEvent
+  | ConnectionAckEvent;
 
 export interface WasteDistribution {
   organic_kg: number;
@@ -360,4 +364,35 @@ export interface RequestTimeseriesBucket {
   count: number;
   declared_weight_kg: number;
   estimated_methane_m3: number;
+}
+
+// ---- Notifications ----
+export type NotificationType =
+  | "request_accepted"
+  | "request_rejected"
+  | "request_completed";
+
+export interface Notification {
+  id: string;
+  user_id: string;
+  type: NotificationType;
+  title: string;
+  message: string | null;
+  request_id: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationEvent {
+  type: "notification";
+  data: {
+    id: string;
+    notification_type: NotificationType;
+    title: string;
+    message: string | null;
+    request_id: string | null;
+    is_read: boolean;
+    created_at: string | null;
+  };
 }

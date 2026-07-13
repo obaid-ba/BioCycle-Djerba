@@ -10,9 +10,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app.features.alerts.models import Alert
     from app.features.bins.models import SensorReading, SmartBin
+    from app.features.notifications.models import Notification
 
 EVENT_BIN_READING = "bin.reading"
 EVENT_ALERT = "alert"
+EVENT_NOTIFICATION = "notification"
 
 
 def build_reading_event(bin_: "SmartBin", reading: "SensorReading") -> dict:
@@ -30,6 +32,24 @@ def build_reading_event(bin_: "SmartBin", reading: "SensorReading") -> dict:
             "humidity": reading.humidity,
             "weight_kg": reading.weight_kg,
             "recorded_at": reading.recorded_at.isoformat() if reading.recorded_at else None,
+        },
+    }
+
+
+def build_notification_event(notification: "Notification") -> dict:
+    """Envelope for a per-user notification (targeted, not broadcast)."""
+    return {
+        "type": EVENT_NOTIFICATION,
+        "data": {
+            "id": str(notification.id),
+            "notification_type": notification.type.value,
+            "title": notification.title,
+            "message": notification.message,
+            "request_id": str(notification.request_id) if notification.request_id else None,
+            "is_read": notification.is_read,
+            "created_at": notification.created_at.isoformat()
+            if notification.created_at
+            else None,
         },
     }
 
