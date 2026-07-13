@@ -253,3 +253,74 @@ export interface DashboardStats {
   open_alerts: number;
   system: SystemStatus;
 }
+
+// --------------------------------------------------------------------------- //
+// Collection Requests — the core product workflow. Mirrors the backend
+// `requests` feature (features/requests/schemas.py + state_machine.py).
+// --------------------------------------------------------------------------- //
+export type RequestStatus =
+  | "pending"
+  | "ai_failed"
+  | "accepted"
+  | "rejected"
+  | "on_the_way"
+  | "collected"
+  | "completed";
+
+export type RequestAIStatus = "pending" | "success" | "failed";
+
+export interface RequestPhoto {
+  id: string;
+  storage_path: string;
+  content_type: string | null;
+  size_bytes: number | null;
+  created_at: string;
+}
+
+export interface CollectionRequest {
+  id: string;
+  hotel_id: string;
+  status: RequestStatus;
+
+  declared_weight_kg: number;
+  collected_weight_kg: number | null;
+
+  ai_status: RequestAIStatus;
+  ai_quality_score: number | null;
+  ai_organic_purity: number | null;
+  ai_contamination: number | null;
+  ai_estimated_methane_m3: number | null;
+  ai_estimated_energy_kwh: number | null;
+  ai_estimated_co2_kg: number | null;
+  ai_priority_score: number | null;
+  ai_confidence: number | null;
+  ai_model_version: string | null;
+  ai_error: string | null;
+
+  decided_by: string | null;
+  decided_at: string | null;
+  rejection_reason: string | null;
+  operator_notes: string | null;
+  completed_at: string | null;
+
+  photos: RequestPhoto[];
+
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectionRequestCreate {
+  declared_weight_kg: number;
+}
+
+export interface RequestDecision {
+  accept: boolean;
+  rejection_reason?: string | null;
+  notes?: string | null;
+}
+
+export interface RequestTransition {
+  target: RequestStatus;
+  collected_weight_kg?: number | null;
+  notes?: string | null;
+}

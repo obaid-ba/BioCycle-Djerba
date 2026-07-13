@@ -11,8 +11,10 @@ const Login = lazy(() => import("@/pages/Login").then((m) => ({ default: m.Login
 const Dashboard = lazy(() =>
   import("@/pages/Dashboard").then((m) => ({ default: m.Dashboard })),
 );
+const Requests = lazy(() =>
+  import("@/pages/Requests").then((m) => ({ default: m.Requests })),
+);
 const Hotels = lazy(() => import("@/pages/Hotels").then((m) => ({ default: m.Hotels })));
-const Bins = lazy(() => import("@/pages/Bins").then((m) => ({ default: m.Bins })));
 const MapView = lazy(() =>
   import("@/pages/MapView").then((m) => ({ default: m.MapView })),
 );
@@ -44,8 +46,8 @@ export default function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/requests" element={<Requests />} />
           <Route path="/hotels" element={<Hotels />} />
-          <Route path="/bins" element={<Bins />} />
           <Route path="/map" element={<MapView />} />
           <Route path="/collections" element={<Collections />} />
           <Route path="/alerts" element={<Alerts />} />
