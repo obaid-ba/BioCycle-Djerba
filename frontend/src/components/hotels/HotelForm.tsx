@@ -22,6 +22,10 @@ const schema = z.object({
     .optional()
     .or(z.literal("")),
   contact_phone: z.string().optional(),
+  // Optional; when set they must be valid coordinates. Empty stays empty (NaN)
+  // so a hotel can be created without a location and geolocated later.
+  latitude: z.coerce.number().min(-90).max(90).optional().or(z.nan()),
+  longitude: z.coerce.number().min(-180).max(180).optional().or(z.nan()),
   status: z.enum(["active", "inactive", "onboarding"]),
 });
 
@@ -51,6 +55,8 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
       address: hotel?.address ?? "",
       contact_email: hotel?.contact_email ?? "",
       contact_phone: hotel?.contact_phone ?? "",
+      latitude: hotel?.latitude ?? undefined,
+      longitude: hotel?.longitude ?? undefined,
       status: hotel?.status ?? "onboarding",
     },
   });
@@ -63,6 +69,14 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
       address: values.address || null,
       contact_email: values.contact_email || null,
       contact_phone: values.contact_phone || null,
+      latitude:
+        values.latitude != null && !Number.isNaN(values.latitude)
+          ? values.latitude
+          : null,
+      longitude:
+        values.longitude != null && !Number.isNaN(values.longitude)
+          ? values.longitude
+          : null,
       status: values.status,
     };
     try {
@@ -101,6 +115,35 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
         <FormField label="Address" htmlFor="address" error={errors.address?.message}>
           <Input id="address" {...register("address")} />
         </FormField>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField
+            label="Latitude"
+            htmlFor="latitude"
+            error={errors.latitude?.message}
+          >
+            <Input
+              id="latitude"
+              type="number"
+              step="any"
+              placeholder="e.g. 33.79"
+              {...register("latitude")}
+            />
+          </FormField>
+          <FormField
+            label="Longitude"
+            htmlFor="longitude"
+            error={errors.longitude?.message}
+          >
+            <Input
+              id="longitude"
+              type="number"
+              step="any"
+              placeholder="e.g. 11.02"
+              {...register("longitude")}
+            />
+          </FormField>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <FormField
