@@ -46,9 +46,30 @@ export default function App() {
         >
           <Route path="/" element={<Dashboard />} />
           <Route path="/requests" element={<Requests />} />
-          <Route path="/hotels" element={<Hotels />} />
-          <Route path="/map" element={<MapView />} />
-          <Route path="/reports" element={<Reports />} />
+          <Route
+            path="/hotels"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Hotels />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/map"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <MapView />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <Reports />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/users"
             element={

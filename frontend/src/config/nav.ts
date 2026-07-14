@@ -22,9 +22,9 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
   { to: "/requests", label: "Requests", icon: ClipboardList },
-  { to: "/hotels", label: "Hotels", icon: Building2 },
-  { to: "/map", label: "Map", icon: MapPin },
-  { to: "/reports", label: "Reports", icon: FileText },
+  { to: "/hotels", label: "Hotels", icon: Building2, roles: ["admin"] },
+  { to: "/map", label: "Map", icon: MapPin, roles: ["admin"] },
+  { to: "/reports", label: "Reports", icon: FileText, roles: ["admin"] },
   { to: "/users", label: "Users", icon: Users, roles: ["admin"] },
 ];
 
