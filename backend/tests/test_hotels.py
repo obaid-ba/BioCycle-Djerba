@@ -12,7 +12,6 @@ NEW_HOTEL = {
     "country": "Tunisia",
     "latitude": 33.85,
     "longitude": 10.9,
-    "number_of_rooms": 300,
     "status": "active",
 }
 

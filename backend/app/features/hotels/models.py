@@ -3,7 +3,7 @@
 import enum
 import uuid
 
-from sqlalchemy import Enum, Float, ForeignKey, Integer, String
+from sqlalchemy import Enum, Float, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -29,7 +29,6 @@ class Hotel(Base, UUIDMixin, TimestampMixin):
     longitude: Mapped[float | None] = mapped_column(Float)
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_phone: Mapped[str | None] = mapped_column(String(50))
-    number_of_rooms: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[HotelStatus] = mapped_column(
         Enum(
             HotelStatus,

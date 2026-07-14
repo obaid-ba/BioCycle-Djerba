@@ -22,7 +22,6 @@ const schema = z.object({
     .optional()
     .or(z.literal("")),
   contact_phone: z.string().optional(),
-  number_of_rooms: z.coerce.number().int().min(0).optional().or(z.nan()),
   status: z.enum(["active", "inactive", "onboarding"]),
 });
 
@@ -52,7 +51,6 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
       address: hotel?.address ?? "",
       contact_email: hotel?.contact_email ?? "",
       contact_phone: hotel?.contact_phone ?? "",
-      number_of_rooms: hotel?.number_of_rooms ?? undefined,
       status: hotel?.status ?? "onboarding",
     },
   });
@@ -65,10 +63,6 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
       address: values.address || null,
       contact_email: values.contact_email || null,
       contact_phone: values.contact_phone || null,
-      number_of_rooms:
-        values.number_of_rooms != null && !Number.isNaN(values.number_of_rooms)
-          ? values.number_of_rooms
-          : null,
       status: values.status,
     };
     try {
@@ -125,27 +119,13 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
           </FormField>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <FormField
-            label="Rooms"
-            htmlFor="number_of_rooms"
-            error={errors.number_of_rooms?.message}
-          >
-            <Input
-              id="number_of_rooms"
-              type="number"
-              min={0}
-              {...register("number_of_rooms")}
-            />
-          </FormField>
-          <FormField label="Status" htmlFor="status" error={errors.status?.message}>
-            <Select id="status" {...register("status")}>
-              <option value="onboarding">Onboarding</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
-          </FormField>
-        </div>
+        <FormField label="Status" htmlFor="status" error={errors.status?.message}>
+          <Select id="status" {...register("status")}>
+            <option value="onboarding">Onboarding</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </Select>
+        </FormField>
 
         {errors.root && (
           <p className="text-sm text-destructive">{errors.root.message}</p>

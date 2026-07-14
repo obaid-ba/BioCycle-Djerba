@@ -53,7 +53,6 @@ export interface Hotel {
   longitude: number | null;
   contact_email: string | null;
   contact_phone: string | null;
-  number_of_rooms: number | null;
   status: HotelStatus;
   manager_id: string | null;
   created_at: string;
@@ -148,7 +147,6 @@ export interface HotelCreate {
   longitude?: number | null;
   contact_email?: string | null;
   contact_phone?: string | null;
-  number_of_rooms?: number | null;
   status?: HotelStatus;
   manager_id?: string | null;
 }

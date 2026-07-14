@@ -57,7 +57,7 @@ export function Hotels() {
 
   const hotels = query.data?.items ?? [];
   const actionCols = canEdit ? 1 : 0;
-  const colSpan = 4 + actionCols;
+  const colSpan = 3 + actionCols;
 
   function openCreate() {
     setEditing(null);
@@ -128,7 +128,6 @@ export function Hotels() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>City</TableHead>
-              <TableHead>Rooms</TableHead>
               <TableHead>Status</TableHead>
               {canEdit && <TableHead className="text-right">Actions</TableHead>}
             </TableRow>
@@ -149,9 +148,6 @@ export function Hotels() {
                   <TableCell className="font-medium">{hotel.name}</TableCell>
                   <TableCell className="text-muted-foreground">
                     {hotel.city}, {hotel.country}
-                  </TableCell>
-                  <TableCell className="tabular-nums">
-                    {hotel.number_of_rooms ?? "—"}
                   </TableCell>
                   <TableCell>
                     <Badge variant={hotelStatusVariant[hotel.status]}>

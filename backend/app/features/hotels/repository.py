@@ -14,7 +14,6 @@ SORTABLE = {
     "name": Hotel.name,
     "city": Hotel.city,
     "status": Hotel.status,
-    "number_of_rooms": Hotel.number_of_rooms,
     "created_at": Hotel.created_at,
 }
 
