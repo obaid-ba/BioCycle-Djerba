@@ -426,6 +426,18 @@ export interface ReportFilters {
   hotel_id?: string;
 }
 
+// ---- Live estimate (containers × live camera composition) ----
+export interface CameraEstimate {
+  containers: number;
+  declared_weight_kg: number;
+  organic_purity: number | null;
+  quality_score: number;
+  estimated_methane_m3: number;
+  estimated_energy_kwh: number;
+  estimated_co2_kg: number;
+  confidence: number;
+}
+
 // ---- Live camera feed (Firebase) ----
 export interface LiveCameraSummary {
   camera: string | null;

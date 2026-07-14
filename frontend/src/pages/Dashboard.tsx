@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 
 import { CollectionsTrendChart } from "@/components/dashboard/CollectionsTrendChart";
+import { HotelManagerDashboard } from "@/components/dashboard/HotelManagerDashboard";
 import { HotelRankingCard } from "@/components/dashboard/HotelRankingCard";
 import { LiveCameraPanel } from "@/components/dashboard/LiveCameraPanel";
 import { OperatorRankingCard } from "@/components/dashboard/OperatorRankingCard";
@@ -32,6 +33,14 @@ import { formatKg } from "@/lib/utils";
 import type { TimeseriesGranularity } from "@/types";
 
 export function Dashboard() {
+  // Hotel managers get an interactive live-camera estimator; everyone else
+  // (admin) gets the full analytics dashboard below.
+  const isHotelManager = useHasRole("hotel_manager");
+  if (isHotelManager) return <HotelManagerDashboard />;
+  return <AdminDashboard />;
+}
+
+function AdminDashboard() {
   const { user } = useAuth();
   const isAdmin = useHasRole("admin");
   const [granularity, setGranularity] = useState<TimeseriesGranularity>("day");

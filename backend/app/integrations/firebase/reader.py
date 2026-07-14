@@ -110,3 +110,9 @@ class FirebaseRealtimeReader:
         """Current camera state for the live dashboard panel (read-only)."""
         node = await self._fetch_node()
         return summarize_live(node)
+
+    async def read_detections(self) -> dict[str, Any]:
+        """Return the current `detections` map (read-only)."""
+        node = await self._fetch_node()
+        detections = node.get("detections") if isinstance(node, dict) else None
+        return detections if isinstance(detections, dict) else {}

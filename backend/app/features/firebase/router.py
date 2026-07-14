@@ -8,7 +8,7 @@ Read-only.
 
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,3 +55,42 @@ async def live_camera(current_user: CurrentUser, db: DbSession) -> dict[str, Any
         # Surface a clean, non-500 error if the camera/Firebase is unreachable.
         raise ValidationError(f"Camera feed unavailable: {exc}") from exc
     return summary
+
+
+@router.get(
+    "/estimate",
+    summary="Estimate methane/energy/CO2/quality for N containers from the live camera",
+)
+async def estimate(
+    current_user: CurrentUser,
+    db: DbSession,
+    containers: Annotated[int, Query(gt=0, le=1000, description="Number of containers")],
+) -> dict[str, Any]:
+    """Interactive 'what-if': given a container count and the CURRENT camera
+    composition, compute the estimated outputs. Not tied to saved requests."""
+    if not settings.FIREBASE_ENABLED:
+        raise ValidationError("Live camera feed is not enabled")
+    if not await _user_has_camera(db, current_user):
+        raise NotFoundError("No camera is linked to your account")
+
+    from app.integrations.firebase.aggregator import aggregate_detections
+    from app.integrations.firebase.reader import FirebaseError, FirebaseRealtimeReader
+
+    weight_kg = containers * settings.CONTAINER_WEIGHT_KG
+    try:
+        detections = await FirebaseRealtimeReader().read_detections()
+    except FirebaseError as exc:
+        raise ValidationError(f"Camera feed unavailable: {exc}") from exc
+
+    r = aggregate_detections(detections, declared_weight_kg=weight_kg)
+
+    return {
+        "containers": containers,
+        "declared_weight_kg": weight_kg,
+        "organic_purity": r.organic_purity,
+        "quality_score": r.quality_score,
+        "estimated_methane_m3": r.estimated_methane_m3,
+        "estimated_energy_kwh": r.estimated_energy_kwh,
+        "estimated_co2_kg": r.estimated_co2_kg,
+        "confidence": r.confidence,
+    }
