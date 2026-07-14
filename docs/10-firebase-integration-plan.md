@@ -1,12 +1,37 @@
 # Plan — Firebase Integration Layer (biodéchets par device)
 
-> **Statut : PLANIFIÉ, reporté.** Ce document fige l'architecture cible.
-> Décision (2026-07-08) : on termine d'abord la couche métier ; Firebase viendra
-> après. L'**abstraction est déjà en place** — le métier passe par l'interface
-> `RequestDataProvider` (voir `features/requests/data_provider.py`), avec
-> aujourd'hui `StubRequestDataProvider` injecté par DI. Implémenter Firebase =
-> ajouter `FirebaseRealtimeReader` et changer une ligne dans
-> `dependencies.get_data_provider`. Aucun code métier ne changera.
+> **Statut : IMPLÉMENTÉ (contre l'existant), pas encore activé en prod.**
+> `FirebaseRealtimeReader` + `aggregator` sont construits ; le stub reste le
+> provider actif (`FIREBASE_ENABLED=false`) jusqu'à ce que la clé soit
+> régénérée et les règles RTDB verrouillées. Activer = mettre `FIREBASE_ENABLED=true`.
+
+## 0. La donnée Firebase réelle (découverte 2026-07-14)
+
+La structure réelle **diffère du plan initial**. Firebase RTDB contient un flux
+de **vision par caméra**, pas une analyse déchets finie :
+
+```
+/AI_System = {
+  camera, fps, resolution, objects_detected, time,
+  detections: {
+    "<pushId>": { prediction: "O" | "R", confidence: 0.0..1.0, time, camera },
+    ...
+  }
+}
+```
+
+- `prediction: "O"` = organique, `"R"` = recyclable / non-organique.
+- Le backend **agrège** ces détections (`integrations/firebase/aggregator.py`) :
+  `purity = O/(O+R)×100`, contamination, quality (purity × avg confidence),
+  confidence = moyenne ; méthane/énergie/CO₂/priorité dérivés de purity × la
+  quantité déclarée (conteneurs × CONTAINER_WEIGHT_KG).
+- **Un caméra = un hôtel** (mapping `hotel.firebase_device_id`) pour le mono-site.
+- **Stratégie latest-snapshot** : à la création d'une demande, on lit l'état
+  courant du nœud et on agrège les détections présentes.
+
+> L'**abstraction est déjà en place** — le métier passe par l'interface
+> `RequestDataProvider`, avec aujourd'hui le stub OU `FirebaseRealtimeReader`
+> selon `FIREBASE_ENABLED`, injecté par DI. Aucun code métier ne change.
 
 ## 1. Contexte & changement de modèle
 

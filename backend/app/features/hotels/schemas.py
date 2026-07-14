@@ -18,6 +18,7 @@ class HotelBase(BaseSchema):
     longitude: float | None = Field(default=None, ge=-180, le=180)
     contact_email: EmailStr | None = None
     contact_phone: str | None = Field(default=None, max_length=50)
+    firebase_device_id: str | None = Field(default=None, max_length=120)
     status: HotelStatus = HotelStatus.ONBOARDING
 
 
@@ -36,6 +37,7 @@ class HotelUpdate(BaseSchema):
     longitude: float | None = Field(default=None, ge=-180, le=180)
     contact_email: EmailStr | None = None
     contact_phone: str | None = Field(default=None, max_length=50)
+    firebase_device_id: str | None = Field(default=None, max_length=120)
     status: HotelStatus | None = None
     manager_id: uuid.UUID | None = None
 
@@ -50,6 +52,7 @@ class HotelRead(BaseSchema):
     longitude: float | None
     contact_email: EmailStr | None
     contact_phone: str | None
+    firebase_device_id: str | None
     status: HotelStatus
     manager_id: uuid.UUID | None
     created_at: datetime

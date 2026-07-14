@@ -47,7 +47,9 @@ async def test_summary_totals_and_acceptance(
     body = resp.json()
 
     assert body["totals"]["requests"] == 3
-    assert body["totals"]["declared_weight_kg"] == 600 * 700
+    from app.core.config import settings
+
+    assert body["totals"]["declared_weight_kg"] == 600 * settings.CONTAINER_WEIGHT_KG
     assert body["totals"]["estimated_methane_m3"] > 0
     assert body["status_counts"]["accepted"] == 1
     assert body["status_counts"]["rejected"] == 1

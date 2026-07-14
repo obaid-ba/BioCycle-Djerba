@@ -29,6 +29,10 @@ class Hotel(Base, UUIDMixin, TimestampMixin):
     longitude: Mapped[float | None] = mapped_column(Float)
     contact_email: Mapped[str | None] = mapped_column(String(255))
     contact_phone: Mapped[str | None] = mapped_column(String(50))
+    # Links this hotel to its Firebase camera/device feed. When set, requests for
+    # this hotel are analyzed from that device's detections. NULL = no device
+    # (falls back to the stub/manual analysis).
+    firebase_device_id: Mapped[str | None] = mapped_column(String(120), unique=True, index=True)
     status: Mapped[HotelStatus] = mapped_column(
         Enum(
             HotelStatus,

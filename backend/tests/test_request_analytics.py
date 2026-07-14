@@ -42,7 +42,9 @@ async def test_request_stats(
     assert body["status_counts"]["accepted"] == 1
     assert body["status_counts"]["rejected"] == 1
     assert body["status_counts"]["pending"] == 1
-    assert body["declared_weight_kg"] == 750 * 700
+    from app.core.config import settings
+
+    assert body["declared_weight_kg"] == 750 * settings.CONTAINER_WEIGHT_KG
     assert body["estimated_methane_m3"] > 0
     assert body["avg_quality_score"] is not None
     # 1 accepted of 2 decided -> 50%.

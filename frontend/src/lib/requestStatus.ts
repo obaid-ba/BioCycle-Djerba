@@ -9,10 +9,10 @@ import type { RequestStatus } from "@/types";
 
 /**
  * Weight of one standard container, in kg. Mirrors the backend's
- * CONTAINER_WEIGHT_KG (default 700) for the hotel form's live preview. The
- * server is authoritative — it recomputes the weight on create.
+ * CONTAINER_WEIGHT_KG for the hotel form's live "≈ N kg" preview. The server is
+ * authoritative — it recomputes the weight on create, so this is display-only.
  */
-export const CONTAINER_WEIGHT_KG = 700;
+export const CONTAINER_WEIGHT_KG = 600;
 
 type BadgeVariant =
   | "default"

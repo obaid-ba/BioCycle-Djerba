@@ -26,6 +26,7 @@ const schema = z.object({
   // so a hotel can be created without a location and geolocated later.
   latitude: z.coerce.number().min(-90).max(90).optional().or(z.nan()),
   longitude: z.coerce.number().min(-180).max(180).optional().or(z.nan()),
+  firebase_device_id: z.string().optional(),
   status: z.enum(["active", "inactive", "onboarding"]),
 });
 
@@ -57,6 +58,7 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
       contact_phone: hotel?.contact_phone ?? "",
       latitude: hotel?.latitude ?? undefined,
       longitude: hotel?.longitude ?? undefined,
+      firebase_device_id: hotel?.firebase_device_id ?? "",
       status: hotel?.status ?? "onboarding",
     },
   });
@@ -77,6 +79,7 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
         values.longitude != null && !Number.isNaN(values.longitude)
           ? values.longitude
           : null,
+      firebase_device_id: values.firebase_device_id?.trim() || null,
       status: values.status,
     };
     try {
@@ -168,6 +171,18 @@ export function HotelForm({ open, onClose, hotel, onSubmit }: HotelFormProps) {
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
           </Select>
+        </FormField>
+
+        <FormField
+          label="Firebase device ID"
+          htmlFor="firebase_device_id"
+          error={errors.firebase_device_id?.message}
+        >
+          <Input
+            id="firebase_device_id"
+            placeholder="Camera/device feed for this hotel (optional)"
+            {...register("firebase_device_id")}
+          />
         </FormField>
 
         {errors.root && (

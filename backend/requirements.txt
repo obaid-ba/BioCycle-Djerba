@@ -25,5 +25,9 @@ paho-mqtt==2.1.0
 # ---- HTTP client for AI integration (Phase 5) ----
 httpx==0.28.1
 
+# ---- Firebase Realtime DB (read-only): service-account -> OAuth token, read
+# via REST with httpx. google-auth is light vs. the full firebase-admin SDK. ----
+google-auth==2.35.0
+
 # ---- Utils ----
 python-multipart==0.0.20

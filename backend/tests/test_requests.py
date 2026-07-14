@@ -40,9 +40,11 @@ async def test_hotel_creates_request_and_gets_ai_scores(
     assert body["ai_estimated_methane_m3"] > 0
     assert body["ai_estimated_energy_kwh"] > 0
     assert 0 <= body["ai_confidence"] <= 1
-    # weight is derived: containers × 700
+    # weight is derived: containers × CONTAINER_WEIGHT_KG
+    from app.core.config import settings
+
     assert body["declared_containers"] == 320
-    assert body["declared_weight_kg"] == 320 * 700
+    assert body["declared_weight_kg"] == 320 * settings.CONTAINER_WEIGHT_KG
 
 
 async def test_ai_scoring_is_deterministic(

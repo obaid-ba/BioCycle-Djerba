@@ -53,6 +53,7 @@ export interface Hotel {
   longitude: number | null;
   contact_email: string | null;
   contact_phone: string | null;
+  firebase_device_id: string | null;
   status: HotelStatus;
   manager_id: string | null;
   created_at: string;
@@ -147,6 +148,7 @@ export interface HotelCreate {
   longitude?: number | null;
   contact_email?: string | null;
   contact_phone?: string | null;
+  firebase_device_id?: string | null;
   status?: HotelStatus;
   manager_id?: string | null;
 }

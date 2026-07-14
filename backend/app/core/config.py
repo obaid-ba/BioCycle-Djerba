@@ -74,7 +74,18 @@ class Settings(BaseSettings):
     # ---- Collection requests ----
     # Hotels declare a number of standard containers; each is this many kg.
     # declared_weight_kg is derived as declared_containers * CONTAINER_WEIGHT_KG.
-    CONTAINER_WEIGHT_KG: float = 700.0
+    CONTAINER_WEIGHT_KG: float = 600.0
+
+    # ---- Firebase Realtime DB (read-only source of camera detections) ----
+    # When enabled, requests are analyzed from the vision detections in Firebase
+    # instead of the local stub. Read-only: the backend never writes.
+    FIREBASE_ENABLED: bool = False
+    FIREBASE_DB_URL: str = ""  # e.g. https://<project>-default-rtdb.<region>.firebasedatabase.app
+    # Path to the service-account JSON key (kept on disk, gitignored). Empty means
+    # unauthenticated reads (only works while the DB rules are public).
+    FIREBASE_CREDENTIALS_PATH: str = ""
+    # RTDB node holding the detection stream.
+    FIREBASE_DETECTIONS_NODE: str = "AI_System"
 
     # ---- Photo uploads (local disk; hackathon — no object storage) ----
     UPLOAD_DIR: str = "/uploads"
