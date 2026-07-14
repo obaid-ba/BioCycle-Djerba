@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { FormField } from "@/components/common/FormField";
@@ -8,13 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { messageFromError } from "@/lib/errors";
+import { formatKg } from "@/lib/utils";
+import { CONTAINER_WEIGHT_KG } from "@/lib/requestStatus";
 import type { CollectionRequestCreate } from "@/types";
 
 const schema = z.object({
-  declared_weight_kg: z.coerce
+  declared_containers: z.coerce
     .number()
-    .gt(0, "Enter a weight greater than 0")
-    .max(100_000, "That seems too large"),
+    .int("Enter a whole number of containers")
+    .gt(0, "Enter at least 1 container")
+    .max(1000, "That seems too large"),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -26,24 +29,31 @@ interface NewRequestFormProps {
 }
 
 /**
- * Hotel-facing form to open a collection request. This iteration collects only
- * the declared quantity; photo upload is a later brick (photos are optional at
- * MVP), so nothing here blocks on files.
+ * Hotel-facing form to open a collection request. The hotel declares a number
+ * of standard containers; the equivalent weight (containers × 700 kg) is shown
+ * live and computed server-side. Photo upload is a separate step.
  */
 export function NewRequestForm({ open, onClose, onSubmit }: NewRequestFormProps) {
   const {
     register,
+    control,
     handleSubmit,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { declared_weight_kg: 0 },
+    defaultValues: { declared_containers: 1 },
   });
+
+  const containers = useWatch({ control, name: "declared_containers" });
+  const kg =
+    typeof containers === "number" && !Number.isNaN(containers) && containers > 0
+      ? containers * CONTAINER_WEIGHT_KG
+      : 0;
 
   async function submit(values: FormValues) {
     try {
-      await onSubmit({ declared_weight_kg: values.declared_weight_kg });
+      await onSubmit({ declared_containers: values.declared_containers });
       onClose();
     } catch (error) {
       setError("root", { message: messageFromError(error) });
@@ -59,18 +69,21 @@ export function NewRequestForm({ open, onClose, onSubmit }: NewRequestFormProps)
     >
       <form onSubmit={handleSubmit(submit)} className="space-y-4" noValidate>
         <FormField
-          label="Organic waste quantity (kg)"
-          htmlFor="declared_weight_kg"
-          error={errors.declared_weight_kg?.message}
+          label="Number of containers"
+          htmlFor="declared_containers"
+          error={errors.declared_containers?.message}
         >
           <Input
-            id="declared_weight_kg"
+            id="declared_containers"
             type="number"
-            step="0.1"
-            min={0}
+            step="1"
+            min={1}
             autoFocus
-            {...register("declared_weight_kg")}
+            {...register("declared_containers")}
           />
+          <p className="mt-1.5 text-xs text-muted-foreground">
+            ≈ {formatKg(kg)} · {CONTAINER_WEIGHT_KG} kg per container
+          </p>
         </FormField>
 
         {errors.root && (

@@ -29,7 +29,7 @@ async def test_hotel_creates_request_and_gets_ai_scores(
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
 
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 320})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": 320})
 
     assert resp.status_code == 201, resp.text
     body = resp.json()
@@ -40,7 +40,9 @@ async def test_hotel_creates_request_and_gets_ai_scores(
     assert body["ai_estimated_methane_m3"] > 0
     assert body["ai_estimated_energy_kwh"] > 0
     assert 0 <= body["ai_confidence"] <= 1
-    assert body["declared_weight_kg"] == 320
+    # weight is derived: containers × 700
+    assert body["declared_containers"] == 320
+    assert body["declared_weight_kg"] == 320 * 700
 
 
 async def test_ai_scoring_is_deterministic(
@@ -48,7 +50,7 @@ async def test_ai_scoring_is_deterministic(
 ) -> None:
     """Same request id must always produce the same score (stub is reproducible)."""
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    created = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 100})).json()
+    created = (await client.post("/api/requests", headers=headers, json={"declared_containers": 100})).json()
 
     fetched = (await client.get(f"/api/requests/{created['id']}", headers=headers)).json()
     assert fetched["ai_priority_score"] == created["ai_priority_score"]
@@ -58,7 +60,7 @@ async def test_create_rejects_non_positive_weight(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 0})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": 0})
     assert resp.status_code == 422
 
 
@@ -66,12 +68,12 @@ async def test_operator_cannot_create_request(
     client: AsyncClient, auth_headers: Callable
 ) -> None:
     headers = await auth_headers(UserRole.OPERATOR)
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 50})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": 50})
     assert resp.status_code == 403
 
 
 async def test_create_requires_auth(client: AsyncClient) -> None:
-    resp = await client.post("/api/requests", json={"declared_weight_kg": 50})
+    resp = await client.post("/api/requests", json={"declared_containers": 50})
     assert resp.status_code == 401
 
 
@@ -80,7 +82,7 @@ async def test_manager_without_hotel_cannot_create(
 ) -> None:
     # A hotel manager with no assigned hotel.
     headers = await auth_headers(UserRole.HOTEL_MANAGER, email="lonely@test.io")
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 50})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": 50})
     assert resp.status_code == 422
 
 
@@ -95,7 +97,7 @@ async def test_queue_sorted_by_priority_first(
     request, so priority must be non-increasing down the returned queue."""
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
     for w in (50, 400, 150, 500, 250):
-        await client.post("/api/requests", headers=headers, json={"declared_weight_kg": w})
+        await client.post("/api/requests", headers=headers, json={"declared_containers": w})
 
     op_headers = await auth_headers(UserRole.OPERATOR)
     resp = await client.get("/api/requests", headers=op_headers)
@@ -146,6 +148,7 @@ async def test_queue_five_key_ordering_is_exact(
                     hotel_id=hotel.id,
                     status=RequestStatus.PENDING,
                     ai_status=AIStatus.SUCCESS,
+                    declared_containers=max(1, round(w / 700)),
                     declared_weight_kg=w,
                     ai_priority_score=p,
                     ai_quality_score=q,
@@ -187,7 +190,7 @@ async def test_distance_tiebreak_orders_closer_hotel_first(
     )
     near_headers = await login("near@test.io")
     near = (
-        await client.post("/api/requests", headers=near_headers, json={"declared_weight_kg": 100})
+        await client.post("/api/requests", headers=near_headers, json={"declared_containers": 100})
     ).json()
 
     far_mgr = await make_user(email="far@test.io", role=UserRole.HOTEL_MANAGER)
@@ -197,7 +200,7 @@ async def test_distance_tiebreak_orders_closer_hotel_first(
     )
     far_headers = await login("far@test.io")
     far = (
-        await client.post("/api/requests", headers=far_headers, json={"declared_weight_kg": 100})
+        await client.post("/api/requests", headers=far_headers, json={"declared_containers": 100})
     ).json()
 
     # Distance snapshot is populated and matches haversine, near < far.
@@ -222,7 +225,7 @@ async def test_request_without_hotel_coords_has_null_distance(
     await make_hotel(name="No Coords", manager_id=mgr.id)  # no lat/lng
     headers = await login("nocoord@test.io")
 
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 100})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": 100})
     assert resp.status_code == 201
     assert resp.json()["distance_to_plant_km"] is None
 
@@ -231,7 +234,7 @@ async def test_manager_only_sees_own_requests(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable
 ) -> None:
     h1, _ = await _hotel_manager(make_user, make_hotel, login, email="m1@test.io")
-    await client.post("/api/requests", headers=h1, json={"declared_weight_kg": 100})
+    await client.post("/api/requests", headers=h1, json={"declared_containers": 100})
 
     # A second manager with their own hotel sees none of the first's requests.
     m2 = await make_user(email="m2@test.io", role=UserRole.HOTEL_MANAGER)
@@ -247,7 +250,7 @@ async def test_manager_cannot_read_other_request_404(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable
 ) -> None:
     h1, _ = await _hotel_manager(make_user, make_hotel, login, email="m1@test.io")
-    created = (await client.post("/api/requests", headers=h1, json={"declared_weight_kg": 100})).json()
+    created = (await client.post("/api/requests", headers=h1, json={"declared_containers": 100})).json()
 
     m2 = await make_user(email="m2@test.io", role=UserRole.HOTEL_MANAGER)
     await make_hotel(name="Other Hotel", manager_id=m2.id)
@@ -266,7 +269,7 @@ async def test_operator_accepts_request(
     auth_headers: Callable,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
 
     op = await auth_headers(UserRole.OPERATOR)
     resp = await client.post(
@@ -286,7 +289,7 @@ async def test_operator_rejects_request_with_reason(
     auth_headers: Callable,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
 
     op = await auth_headers(UserRole.OPERATOR)
     resp = await client.post(
@@ -305,7 +308,7 @@ async def test_reject_without_reason_is_422(
     auth_headers: Callable,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
 
     op = await auth_headers(UserRole.OPERATOR)
     resp = await client.post(
@@ -318,7 +321,7 @@ async def test_hotel_manager_cannot_decide(
     client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
 
     resp = await client.post(
         f"/api/requests/{req['id']}/decision", headers=headers, json={"accept": True}
@@ -334,7 +337,7 @@ async def test_full_lifecycle_to_completed(
     auth_headers: Callable,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 300})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 300})).json()
     op = await auth_headers(UserRole.OPERATOR)
     rid = req["id"]
 
@@ -363,7 +366,7 @@ async def test_illegal_transition_from_pending_is_409(
     auth_headers: Callable, target: str,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
     op = await auth_headers(UserRole.OPERATOR)
 
     # None of these are reachable from PENDING (must be accepted first).
@@ -379,7 +382,7 @@ async def test_collected_requires_weight_422(
     auth_headers: Callable,
 ) -> None:
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
     op = await auth_headers(UserRole.OPERATOR)
     rid = req["id"]
 
@@ -398,7 +401,7 @@ async def test_transition_endpoint_rejects_accept_target_422(
 ) -> None:
     """accept/reject must go through /decision, not /transition."""
     headers, _ = await _hotel_manager(make_user, make_hotel, login)
-    req = (await client.post("/api/requests", headers=headers, json={"declared_weight_kg": 200})).json()
+    req = (await client.post("/api/requests", headers=headers, json={"declared_containers": 200})).json()
     op = await auth_headers(UserRole.OPERATOR)
 
     resp = await client.post(

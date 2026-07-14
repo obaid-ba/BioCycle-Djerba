@@ -15,7 +15,7 @@ async def _manager_and_hotel(make_user, make_hotel, login, *, email="notif-mgr@t
 
 
 async def _create_request(client, headers, kg=200) -> str:
-    r = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": kg})
+    r = await client.post("/api/requests", headers=headers, json={"declared_containers": kg})
     return r.json()["id"]
 
 

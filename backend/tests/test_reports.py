@@ -21,7 +21,7 @@ async def _seed_requests(client, headers, op, weights_and_decisions):
     ids = []
     for kg, decision in weights_and_decisions:
         rid = (
-            await client.post("/api/requests", headers=headers, json={"declared_weight_kg": kg})
+            await client.post("/api/requests", headers=headers, json={"declared_containers": kg})
         ).json()["id"]
         ids.append(rid)
         if decision == "accept":
@@ -47,7 +47,7 @@ async def test_summary_totals_and_acceptance(
     body = resp.json()
 
     assert body["totals"]["requests"] == 3
-    assert body["totals"]["declared_weight_kg"] == 600.0
+    assert body["totals"]["declared_weight_kg"] == 600 * 700
     assert body["totals"]["estimated_methane_m3"] > 0
     assert body["status_counts"]["accepted"] == 1
     assert body["status_counts"]["rejected"] == 1

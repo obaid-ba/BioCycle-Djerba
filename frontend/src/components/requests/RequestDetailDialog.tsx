@@ -78,7 +78,10 @@ export function RequestDetailDialog({
       <div className="space-y-5">
         {/* Summary */}
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Field label="Declared" value={formatKg(request.declared_weight_kg)} />
+          <Field
+            label="Declared"
+            value={`${request.declared_containers} × cont. · ${formatKg(request.declared_weight_kg)}`}
+          />
           <Field
             label="Status"
             value={<RequestStatusBadge status={request.status} />}

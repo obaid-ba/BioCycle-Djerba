@@ -284,6 +284,7 @@ export interface CollectionRequest {
   hotel_id: string;
   status: RequestStatus;
 
+  declared_containers: number;
   declared_weight_kg: number;
   collected_weight_kg: number | null;
   distance_to_plant_km: number | null;
@@ -313,7 +314,7 @@ export interface CollectionRequest {
 }
 
 export interface CollectionRequestCreate {
-  declared_weight_kg: number;
+  declared_containers: number;
 }
 
 export interface RequestDecision {

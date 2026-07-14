@@ -70,7 +70,7 @@ export function DecisionDialog({
       open={open}
       onClose={onClose}
       title="Review request"
-      description={`${request.declared_weight_kg} kg declared · AI priority ${
+      description={`${request.declared_containers} containers (${request.declared_weight_kg} kg) · AI priority ${
         request.ai_priority_score?.toFixed(0) ?? "—"
       }`}
     >

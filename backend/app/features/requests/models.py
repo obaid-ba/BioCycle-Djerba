@@ -57,6 +57,10 @@ class CollectionRequest(Base, UUIDMixin, TimestampMixin):
     )
 
     # ---- Declared / measured quantities ----
+    # The hotel declares a number of standard containers; declared_weight_kg is
+    # derived from it (containers * settings.CONTAINER_WEIGHT_KG) and remains the
+    # value all downstream logic (AI, priority, analytics) works in.
+    declared_containers: Mapped[int] = mapped_column(Integer, nullable=False)
     declared_weight_kg: Mapped[float] = mapped_column(Float, nullable=False)
     # Captured by the operator at the COLLECTED step (real weight on the truck).
     collected_weight_kg: Mapped[float | None] = mapped_column(Float)

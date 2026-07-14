@@ -93,7 +93,13 @@ export function HotelRequestsView() {
                     {formatDateTime(r.created_at)}
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {formatKg(r.declared_weight_kg)}
+                    <div>
+                      {r.declared_containers}{" "}
+                      {r.declared_containers === 1 ? "container" : "containers"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatKg(r.declared_weight_kg)}
+                    </div>
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.ai_quality_score != null ? r.ai_quality_score.toFixed(0) : "—"}

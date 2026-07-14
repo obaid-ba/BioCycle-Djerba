@@ -123,7 +123,10 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
                     {formatDateTime(r.created_at)}
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {formatKg(r.declared_weight_kg)}
+                    <div>{r.declared_containers} cont.</div>
+                    <div className="text-xs text-muted-foreground">
+                      {formatKg(r.declared_weight_kg)}
+                    </div>
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.ai_organic_purity != null

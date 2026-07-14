@@ -189,9 +189,14 @@ class RequestService:
         target_hotel_id = await self._resolve_hotel_for_manager(user, hotel_id)
         hotel = await self.hotels.get(target_hotel_id)
 
+        # The hotel declares a container count; weight in kg is derived here and
+        # remains the value all downstream logic (AI, priority, analytics) uses.
+        weight_kg = data.declared_containers * settings.CONTAINER_WEIGHT_KG
+
         req = CollectionRequest(
             hotel_id=target_hotel_id,
-            declared_weight_kg=data.declared_weight_kg,
+            declared_containers=data.declared_containers,
+            declared_weight_kg=weight_kg,
             status=RequestStatus.PENDING,
             ai_status=AIStatus.PENDING,
             distance_to_plant_km=self._distance_to_plant(hotel),

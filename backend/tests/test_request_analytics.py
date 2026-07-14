@@ -16,7 +16,7 @@ async def _manager_with_requests(client, make_user, make_hotel, login, auth_head
 
     ids = []
     for kg in (100, 250, 400):
-        r = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": kg})
+        r = await client.post("/api/requests", headers=headers, json={"declared_containers": kg})
         ids.append(r.json()["id"])
 
     # Accept the first, reject the second, leave the third pending.
@@ -42,7 +42,7 @@ async def test_request_stats(
     assert body["status_counts"]["accepted"] == 1
     assert body["status_counts"]["rejected"] == 1
     assert body["status_counts"]["pending"] == 1
-    assert body["declared_weight_kg"] == 750.0
+    assert body["declared_weight_kg"] == 750 * 700
     assert body["estimated_methane_m3"] > 0
     assert body["avg_quality_score"] is not None
     # 1 accepted of 2 decided -> 50%.
@@ -58,12 +58,12 @@ async def test_hotel_ranking_sorted_by_methane(
     await make_hotel(name="Big Hotel", manager_id=m1.id)
     h1 = await login("r1@test.io")
     for kg in (500, 500):
-        await client.post("/api/requests", headers=h1, json={"declared_weight_kg": kg})
+        await client.post("/api/requests", headers=h1, json={"declared_containers": kg})
 
     m2 = await make_user(email="r2@test.io", role=UserRole.HOTEL_MANAGER)
     await make_hotel(name="Small Hotel", manager_id=m2.id)
     h2 = await login("r2@test.io")
-    await client.post("/api/requests", headers=h2, json={"declared_weight_kg": 50})
+    await client.post("/api/requests", headers=h2, json={"declared_containers": 50})
 
     admin = await auth_headers(UserRole.ADMIN)
     resp = await client.get("/api/analytics/hotel-ranking", headers=admin)

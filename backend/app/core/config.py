@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     ALERT_FILL_CRITICAL: float = 95.0
     ALERT_BATTERY_THRESHOLD: float = 15.0
 
+    # ---- Collection requests ----
+    # Hotels declare a number of standard containers; each is this many kg.
+    # declared_weight_kg is derived as declared_containers * CONTAINER_WEIGHT_KG.
+    CONTAINER_WEIGHT_KG: float = 700.0
+
     # ---- Photo uploads (local disk; hackathon — no object storage) ----
     UPLOAD_DIR: str = "/uploads"
     MAX_PHOTO_SIZE_MB: int = 10

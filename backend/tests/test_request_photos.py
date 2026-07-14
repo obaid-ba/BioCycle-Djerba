@@ -32,7 +32,7 @@ async def _hotel_manager(make_user, make_hotel, login, *, email="ph-mgr@test.io"
 
 
 async def _create_request(client, headers, kg=100) -> str:
-    resp = await client.post("/api/requests", headers=headers, json={"declared_weight_kg": kg})
+    resp = await client.post("/api/requests", headers=headers, json={"declared_containers": kg})
     assert resp.status_code == 201, resp.text
     return resp.json()["id"]
 

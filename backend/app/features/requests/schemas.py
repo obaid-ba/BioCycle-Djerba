@@ -20,10 +20,14 @@ from app.shared.schemas import BaseSchema
 class CollectionRequestCreate(BaseSchema):
     """Payload a hotel submits to open a new collection request."""
 
-    declared_weight_kg: float = Field(
+    declared_containers: int = Field(
         gt=0,
-        le=100_000,
-        description="Organic waste quantity declared by the hotel, in kilograms.",
+        le=1000,
+        description=(
+            "Number of standard containers of organic waste declared by the "
+            "hotel. The weight in kg is derived server-side "
+            "(containers × CONTAINER_WEIGHT_KG)."
+        ),
     )
     # hotel_id is NOT accepted from the body: it is derived server-side from the
     # authenticated hotel manager, so a hotel can never file for another hotel.
@@ -92,6 +96,7 @@ class CollectionRequestRead(BaseSchema):
     hotel_id: uuid.UUID
     status: RequestStatus
 
+    declared_containers: int
     declared_weight_kg: float
     collected_weight_kg: float | None
     distance_to_plant_km: float | None
