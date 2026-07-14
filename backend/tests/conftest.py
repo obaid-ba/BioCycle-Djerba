@@ -22,6 +22,8 @@ from app.core.security import hash_password
 from app.features.auth.models import User, UserRole
 from app.features.bins.models import BinStatus, BinType, SmartBin
 from app.features.hotels.models import Hotel, HotelStatus
+from app.features.requests.data_provider import StubRequestDataProvider
+from app.features.requests.dependencies import get_data_provider
 from app.main import app
 from app.shared.models import Base
 
@@ -64,6 +66,9 @@ async def client(session_factory) -> AsyncGenerator[AsyncClient, None]:
                 raise
 
     app.dependency_overrides[get_db] = override_get_db
+    # Tests must be hermetic: always use the deterministic stub for request
+    # analysis, never live Firebase, regardless of FIREBASE_ENABLED in the env.
+    app.dependency_overrides[get_data_provider] = lambda: StubRequestDataProvider()
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

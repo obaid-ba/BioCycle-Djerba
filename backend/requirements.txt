@@ -26,8 +26,10 @@ paho-mqtt==2.1.0
 httpx==0.28.1
 
 # ---- Firebase Realtime DB (read-only): service-account -> OAuth token, read
-# via REST with httpx. google-auth is light vs. the full firebase-admin SDK. ----
+# via REST with httpx. google-auth is light vs. the full firebase-admin SDK.
+# `requests` is used by google-auth's token transport for the refresh call. ----
 google-auth==2.35.0
+requests==2.32.3
 
 # ---- Utils ----
 python-multipart==0.0.20
