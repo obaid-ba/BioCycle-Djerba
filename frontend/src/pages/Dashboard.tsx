@@ -13,7 +13,6 @@ import { useState } from "react";
 import { CollectionsTrendChart } from "@/components/dashboard/CollectionsTrendChart";
 import { HotelManagerDashboard } from "@/components/dashboard/HotelManagerDashboard";
 import { HotelRankingCard } from "@/components/dashboard/HotelRankingCard";
-import { LiveCameraPanel } from "@/components/dashboard/LiveCameraPanel";
 import { OperatorRankingCard } from "@/components/dashboard/OperatorRankingCard";
 import { RequestStatusTiles } from "@/components/dashboard/RequestStatusTiles";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -126,9 +125,6 @@ function AdminDashboard() {
       ) : (
         <>
           <SystemStatusBar system={stats.data?.system} loading={stats.isLoading} />
-
-          {/* Live camera feed — self-hides when the user has no linked camera. */}
-          <LiveCameraPanel />
 
           <RequestStatusTiles stats={rs} loading={reqStats.isLoading} />
 
