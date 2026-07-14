@@ -22,7 +22,7 @@ interface AuthContextValue {
   /** True while the initial session is being restored from a stored token. */
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
   logout: () => void;
 }
 
@@ -80,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authService.login(email, password);
     const me = await authService.getMe();
     setUser(me);
+    return me; // let callers route by role immediately
   }, []);
 
   const value = useMemo<AuthContextValue>(

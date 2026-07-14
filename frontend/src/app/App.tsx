@@ -44,7 +44,14 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="/" element={<Dashboard />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute roles={["admin", "hotel_manager"]}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
           <Route path="/requests" element={<Requests />} />
           <Route
             path="/hotels"

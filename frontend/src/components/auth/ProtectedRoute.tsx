@@ -2,6 +2,7 @@ import { Loader2 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 
+import { homePathForRole } from "@/config/nav";
 import { useAuth } from "@/context/auth";
 import type { UserRole } from "@/types";
 
@@ -33,7 +34,8 @@ export function ProtectedRoute({ children, roles }: ProtectedRouteProps) {
   }
 
   if (roles && user && !roles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    // Send them to their own landing page, not a page they also can't see.
+    return <Navigate to={homePathForRole(user.role)} replace />;
   }
 
   return <>{children}</>;

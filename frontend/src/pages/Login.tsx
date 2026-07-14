@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { homePathForRole } from "@/config/nav";
 import { useAuth } from "@/context/auth";
 import { messageFromError } from "@/lib/errors";
 
@@ -40,7 +41,7 @@ function messageFromLoginError(error: unknown): string {
 }
 
 export function Login() {
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [formError, setFormError] = useState<string | null>(null);
@@ -51,16 +52,20 @@ export function Login() {
     formState: { errors, isSubmitting },
   } = useForm<LoginValues>({ resolver: zodResolver(loginSchema) });
 
-  const from = (location.state as LocationState | null)?.from?.pathname ?? "/";
+  const from = (location.state as LocationState | null)?.from?.pathname;
 
-  // Already signed in? Skip the form.
-  if (isAuthenticated) return <Navigate to={from} replace />;
+  // Already signed in? Skip the form — land on the intended page, or the
+  // role's home if there wasn't one.
+  if (isAuthenticated && user) {
+    return <Navigate to={from ?? homePathForRole(user.role)} replace />;
+  }
 
   async function onSubmit(values: LoginValues) {
     setFormError(null);
     try {
-      await login(values.email, values.password);
-      navigate(from, { replace: true });
+      const me = await login(values.email, values.password);
+      // Honor a deep-link redirect if present; otherwise go to the role's home.
+      navigate(from ?? homePathForRole(me.role), { replace: true });
     } catch (error) {
       setFormError(messageFromLoginError(error));
     }
