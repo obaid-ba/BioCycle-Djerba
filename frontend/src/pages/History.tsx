@@ -1,7 +1,6 @@
-import { ImageIcon, Plus } from "lucide-react";
+import { ImageIcon } from "lucide-react";
 import { useState } from "react";
 
-import { NewRequestForm } from "@/components/requests/NewRequestForm";
 import { RequestDetailDialog } from "@/components/requests/RequestDetailDialog";
 import { RequestStatusBadge } from "@/components/requests/RequestStatusBadge";
 import { PageToolbar } from "@/components/common/PageToolbar";
@@ -17,53 +16,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCreateRequest, useRequests } from "@/hooks/useRequests";
-import { useToast } from "@/context/toast";
-import { messageFromError } from "@/lib/errors";
+import { useRequests } from "@/hooks/useRequests";
 import { formatDateTime, formatKg } from "@/lib/utils";
-import type { CollectionRequest, CollectionRequestCreate } from "@/types";
+import type { CollectionRequest } from "@/types";
 
-/** Hotel-manager view: their own requests, newest first, with a create action. */
-export function HotelRequestsView() {
+/**
+ * Hotel-manager History: finished requests (completed / rejected). These leave
+ * the active Requests page once the operator closes them out.
+ */
+export function History() {
   const [page, setPage] = useState(1);
-  const [formOpen, setFormOpen] = useState(false);
   const [selected, setSelected] = useState<CollectionRequest | null>(null);
 
-  const toast = useToast();
-  // Active requests only; finished ones (completed/rejected) live in History.
-  const query = useRequests({ page, terminal: false });
-  const createMut = useCreateRequest();
-
+  const query = useRequests({ page, terminal: true });
   const requests = query.data?.items ?? [];
-
-  // Keep the open detail dialog in sync with refreshed data (e.g. after an
-  // upload invalidates the query, so the photo grid updates live).
-  const selectedFresh = selected
-    ? (requests.find((r) => r.id === selected.id) ?? selected)
-    : null;
-
-  async function submit(payload: CollectionRequestCreate) {
-    try {
-      await createMut.mutateAsync({ payload });
-      toast.success("Request submitted. Our AI is scoring it now.");
-    } catch (error) {
-      // Re-throw so the form surfaces the message inline.
-      toast.error(messageFromError(error, "Could not submit the request."));
-      throw error;
-    }
-  }
 
   return (
     <div className="space-y-6">
       <PageToolbar
-        title="Requests"
-        description="Your active requests. Finished ones move to History."
-      >
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus />
-          New request
-        </Button>
-      </PageToolbar>
+        title="History"
+        description="Your completed and rejected requests."
+      />
 
       <Card className="p-2">
         <Table>
@@ -71,10 +44,10 @@ export function HotelRequestsView() {
             <TableRow>
               <TableHead>Created</TableHead>
               <TableHead>Declared</TableHead>
+              <TableHead>Collected</TableHead>
               <TableHead>AI quality</TableHead>
-              <TableHead>Est. methane</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Photos</TableHead>
+              <TableHead className="text-right">Details</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -83,7 +56,7 @@ export function HotelRequestsView() {
               isLoading={query.isLoading}
               isError={query.isError}
               isEmpty={requests.length === 0}
-              emptyLabel="No active requests. Create one, or check History."
+              emptyLabel="No finished requests yet."
               onRetry={() => query.refetch()}
             />
             {!query.isLoading &&
@@ -103,24 +76,20 @@ export function HotelRequestsView() {
                     </div>
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {r.ai_quality_score != null ? r.ai_quality_score.toFixed(0) : "—"}
+                    {r.collected_weight_kg != null
+                      ? formatKg(r.collected_weight_kg)
+                      : "—"}
                   </TableCell>
                   <TableCell className="tabular-nums">
-                    {r.ai_estimated_methane_m3 != null
-                      ? `${r.ai_estimated_methane_m3.toFixed(0)} m³`
-                      : "—"}
+                    {r.ai_quality_score != null ? r.ai_quality_score.toFixed(0) : "—"}
                   </TableCell>
                   <TableCell>
                     <RequestStatusBadge status={r.status} />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setSelected(r)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setSelected(r)}>
                       <ImageIcon />
-                      {r.photos.length > 0 ? r.photos.length : "Add"}
+                      View
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -138,19 +107,11 @@ export function HotelRequestsView() {
         />
       )}
 
-      {formOpen && (
-        <NewRequestForm
-          open={formOpen}
-          onClose={() => setFormOpen(false)}
-          onSubmit={submit}
-        />
-      )}
-
-      {selectedFresh && (
+      {selected && (
         <RequestDetailDialog
-          open={!!selectedFresh}
-          request={selectedFresh}
-          canEditPhotos
+          open={!!selected}
+          request={selected}
+          canEditPhotos={false}
           onClose={() => setSelected(null)}
         />
       )}

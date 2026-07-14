@@ -410,3 +410,48 @@ async def test_transition_endpoint_rejects_accept_target_422(
         f"/api/requests/{req['id']}/transition", headers=op, json={"target": "accepted"}
     )
     assert resp.status_code == 422
+
+
+# --------------------------------------------------------------------------- #
+# Active vs finished split (Requests page vs History page)
+# --------------------------------------------------------------------------- #
+async def test_terminal_filter_splits_active_and_finished(
+    client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
+    auth_headers: Callable,
+) -> None:
+    headers, _ = await _hotel_manager(make_user, make_hotel, login)
+    op = await auth_headers(UserRole.OPERATOR)
+
+    # One left pending (active), one accepted (active), one rejected (finished),
+    # one driven to completed (finished).
+    pending = (await client.post("/api/requests", headers=headers, json={"declared_containers": 1})).json()
+    accepted = (await client.post("/api/requests", headers=headers, json={"declared_containers": 2})).json()
+    rejected = (await client.post("/api/requests", headers=headers, json={"declared_containers": 3})).json()
+    completed = (await client.post("/api/requests", headers=headers, json={"declared_containers": 4})).json()
+
+    await client.post(f"/api/requests/{accepted['id']}/decision", headers=op, json={"accept": True})
+    await client.post(
+        f"/api/requests/{rejected['id']}/decision", headers=op,
+        json={"accept": False, "rejection_reason": "no"},
+    )
+    await client.post(f"/api/requests/{completed['id']}/decision", headers=op, json={"accept": True})
+    await client.post(f"/api/requests/{completed['id']}/transition", headers=op, json={"target": "on_the_way"})
+    await client.post(
+        f"/api/requests/{completed['id']}/transition", headers=op,
+        json={"target": "collected", "collected_weight_kg": 100},
+    )
+    await client.post(f"/api/requests/{completed['id']}/transition", headers=op, json={"target": "completed"})
+
+    active = (await client.get("/api/requests?terminal=false", headers=headers)).json()
+    finished = (await client.get("/api/requests?terminal=true", headers=headers)).json()
+
+    active_ids = {i["id"] for i in active["items"]}
+    finished_ids = {i["id"] for i in finished["items"]}
+
+    assert pending["id"] in active_ids
+    assert accepted["id"] in active_ids
+    assert rejected["id"] in finished_ids
+    assert completed["id"] in finished_ids
+    # No overlap, and finished are exactly the terminal ones.
+    assert active_ids & finished_ids == set()
+    assert all(i["status"] in ("completed", "rejected") for i in finished["items"])

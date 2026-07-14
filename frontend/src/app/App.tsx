@@ -14,6 +14,9 @@ const Dashboard = lazy(() =>
 const Requests = lazy(() =>
   import("@/pages/Requests").then((m) => ({ default: m.Requests })),
 );
+const History = lazy(() =>
+  import("@/pages/History").then((m) => ({ default: m.History })),
+);
 const Hotels = lazy(() => import("@/pages/Hotels").then((m) => ({ default: m.Hotels })));
 const MapView = lazy(() =>
   import("@/pages/MapView").then((m) => ({ default: m.MapView })),
@@ -53,6 +56,14 @@ export default function App() {
             }
           />
           <Route path="/requests" element={<Requests />} />
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute roles={["hotel_manager"]}>
+                <History />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/hotels"
             element={

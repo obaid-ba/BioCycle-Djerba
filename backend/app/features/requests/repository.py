@@ -7,7 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.sql import ColumnExpressionArgument
 
 from app.features.requests.models import CollectionRequest
-from app.features.requests.state_machine import RequestStatus
+from app.features.requests.state_machine import TERMINAL_STATES, RequestStatus
 from app.shared.repository import BaseRepository
 from app.shared.schemas import PaginationParams
 
@@ -20,12 +20,21 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         *,
         status: RequestStatus | None,
         hotel_id: uuid.UUID | None,
+        terminal: bool | None = None,
     ) -> list[ColumnExpressionArgument[bool]]:
         filters: list[ColumnExpressionArgument[bool]] = []
         if status is not None:
             filters.append(CollectionRequest.status == status)
         if hotel_id is not None:
             filters.append(CollectionRequest.hotel_id == hotel_id)
+        if terminal is not None:
+            # terminal=True  -> finished requests (completed/rejected)  [History]
+            # terminal=False -> active requests still in progress       [Requests]
+            terminal_values = list(TERMINAL_STATES)
+            if terminal:
+                filters.append(CollectionRequest.status.in_(terminal_values))
+            else:
+                filters.append(CollectionRequest.status.notin_(terminal_values))
         return filters
 
     async def search(
@@ -34,6 +43,7 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         params: PaginationParams,
         status: RequestStatus | None = None,
         hotel_id: uuid.UUID | None = None,
+        terminal: bool | None = None,
     ) -> tuple[Sequence[CollectionRequest], int]:
         """List requests ordered as the operator queue, by the business rules.
 
@@ -48,7 +58,9 @@ class RequestRepository(BaseRepository[CollectionRequest]):
         NULLS LAST on the AI keys keeps not-yet-analyzed requests (no Firebase
         result yet) from jumping the queue; the non-AI keys still order them.
         """
-        filters = self._build_filters(status=status, hotel_id=hotel_id)
+        filters = self._build_filters(
+            status=status, hotel_id=hotel_id, terminal=terminal
+        )
 
         # Multi-key ordering can't go through BaseRepository.list() (single
         # order_by); build the statement here. count() is still shared.

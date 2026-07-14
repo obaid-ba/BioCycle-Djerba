@@ -76,12 +76,17 @@ async def list_requests(
     params: Pagination,
     status_filter: Annotated[RequestStatus | None, Query(alias="status")] = None,
     hotel_id: Annotated[uuid.UUID | None, Query()] = None,
+    terminal: Annotated[
+        bool | None,
+        Query(description="true = finished (history), false = active"),
+    ] = None,
 ) -> Page[CollectionRequestRead]:
     return await service.list(
         params=params,
         user=current_user,
         status=status_filter,
         hotel_id=hotel_id,
+        terminal=terminal,
     )
 
 

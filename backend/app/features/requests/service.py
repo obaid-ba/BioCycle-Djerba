@@ -153,8 +153,14 @@ class RequestService:
         user: User,
         status: RequestStatus | None = None,
         hotel_id: uuid.UUID | None = None,
+        terminal: bool | None = None,
     ) -> Page[CollectionRequestRead]:
-        """Operator queue / hotel history — ordered by AI priority (desc)."""
+        """Operator queue / hotel history — ordered by AI priority (desc).
+
+        `terminal` filters by lifecycle stage: False = active (in progress),
+        True = finished (completed/rejected). Used to split the hotel's active
+        Requests page from its History page.
+        """
         # Hotel managers are hard-scoped to their own hotels regardless of the
         # hotel_id filter they pass.
         if self._hotel_scope(user) is not None:
@@ -168,7 +174,7 @@ class RequestService:
                 hotel_id = next(iter(owned))
 
         items, total = await self.requests.search(
-            params=params, status=status, hotel_id=hotel_id
+            params=params, status=status, hotel_id=hotel_id, terminal=terminal
         )
         # Defense in depth: for a multi-hotel manager with no filter, drop rows
         # outside their ownership set.

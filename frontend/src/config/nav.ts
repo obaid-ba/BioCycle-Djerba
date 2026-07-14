@@ -2,6 +2,7 @@ import {
   Building2,
   ClipboardList,
   FileText,
+  History,
   LayoutDashboard,
   MapPin,
   Users,
@@ -22,6 +23,7 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "hotel_manager"] },
   { to: "/requests", label: "Requests", icon: ClipboardList },
+  { to: "/history", label: "History", icon: History, roles: ["hotel_manager"] },
   { to: "/hotels", label: "Hotels", icon: Building2, roles: ["admin"] },
   { to: "/map", label: "Map", icon: MapPin, roles: ["admin"] },
   { to: "/reports", label: "Reports", icon: FileText, roles: ["admin"] },

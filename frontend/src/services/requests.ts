@@ -14,6 +14,8 @@ export interface RequestListParams {
   page_size?: number;
   status?: RequestStatus;
   hotel_id?: string;
+  /** true = finished (history), false = active. Omit for all. */
+  terminal?: boolean;
 }
 
 export async function listRequests(
