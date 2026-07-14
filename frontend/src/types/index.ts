@@ -425,3 +425,17 @@ export interface ReportFilters {
   status?: RequestStatus;
   hotel_id?: string;
 }
+
+// ---- Live camera feed (Firebase) ----
+export interface LiveCameraSummary {
+  camera: string | null;
+  fps: number | null;
+  resolution: string | null;
+  objects_detected: number | null;
+  last_update: string | null;
+  organic_count: number;
+  recyclable_count: number;
+  total_detections: number;
+  organic_purity: number | null;
+  avg_confidence: number | null;
+}

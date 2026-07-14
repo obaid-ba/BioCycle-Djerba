@@ -46,6 +46,33 @@ def _extract_counts(detections: dict[str, Any]) -> tuple[int, int, float]:
     return organic, recyclable, avg_conf
 
 
+def summarize_live(node: dict[str, Any]) -> dict[str, Any]:
+    """Turn a raw /AI_System node into a live camera summary for the dashboard.
+
+    Unlike `aggregate_detections` (which produces request analysis), this is the
+    real-time view: what the camera is seeing right now, plus its status.
+    """
+    detections = node.get("detections") if isinstance(node, dict) else None
+    if not isinstance(detections, dict):
+        detections = {}
+    organic, recyclable, avg_conf = _extract_counts(detections)
+    total = organic + recyclable
+    purity = round(organic / total * 100, 1) if total else None
+
+    return {
+        "camera": node.get("camera") if isinstance(node, dict) else None,
+        "fps": node.get("fps") if isinstance(node, dict) else None,
+        "resolution": node.get("resolution") if isinstance(node, dict) else None,
+        "objects_detected": node.get("objects_detected") if isinstance(node, dict) else None,
+        "last_update": node.get("time") if isinstance(node, dict) else None,
+        "organic_count": organic,
+        "recyclable_count": recyclable,
+        "total_detections": total,
+        "organic_purity": purity,
+        "avg_confidence": round(avg_conf, 2) if total else None,
+    }
+
+
 def aggregate_detections(
     detections: dict[str, Any], *, declared_weight_kg: float
 ) -> AIResult:

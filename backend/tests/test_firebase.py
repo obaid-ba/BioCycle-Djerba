@@ -110,3 +110,26 @@ def test_reader_is_read_only() -> None:
     public = {m for m in dir(reader) if not m.startswith("_")}
     forbidden = {"write", "set", "update", "delete", "push", "put", "post"}
     assert public & forbidden == set(), f"reader exposes write methods: {public & forbidden}"
+
+
+# --------------------------------------------------------------------------- #
+# Live summary (dashboard)
+# --------------------------------------------------------------------------- #
+def test_summarize_live() -> None:
+    from app.integrations.firebase.aggregator import summarize_live
+
+    s = summarize_live(SAMPLE_NODE)
+    assert s["camera"] == "online"
+    assert s["organic_count"] == 7
+    assert s["recyclable_count"] == 3
+    assert s["total_detections"] == 10
+    assert s["organic_purity"] == 70.0
+    assert 0 < s["avg_confidence"] <= 1
+
+
+def test_summarize_live_empty() -> None:
+    from app.integrations.firebase.aggregator import summarize_live
+
+    s = summarize_live({})
+    assert s["total_detections"] == 0
+    assert s["organic_purity"] is None

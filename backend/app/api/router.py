@@ -13,6 +13,7 @@ from app.features.analytics.router import (
     dashboard_router,
 )
 from app.features.auth.router import router as auth_router
+from app.features.firebase.router import router as firebase_router
 from app.features.health.router import router as health_router
 from app.features.hotels.router import router as hotels_router
 from app.features.notifications.router import router as notifications_router
@@ -27,6 +28,7 @@ api_router.include_router(hotels_router, prefix="/hotels", tags=["Hotels"])
 api_router.include_router(requests_router, prefix="/requests", tags=["Collection Requests"])
 api_router.include_router(notifications_router, prefix="/notifications", tags=["Notifications"])
 api_router.include_router(reports_router, prefix="/reports", tags=["Reports"])
+api_router.include_router(firebase_router, prefix="/firebase", tags=["Live Camera"])
 api_router.include_router(activity_router, prefix="/activity-logs", tags=["Activity Logs"])
 api_router.include_router(dashboard_router, prefix="/dashboard", tags=["Dashboard"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])

@@ -19,7 +19,7 @@ import httpx
 from app.core.config import settings
 from app.core.logging import get_logger
 from app.features.requests.schemas import AIResult
-from app.integrations.firebase.aggregator import aggregate_detections
+from app.integrations.firebase.aggregator import aggregate_detections, summarize_live
 
 logger = get_logger(__name__)
 
@@ -105,3 +105,8 @@ class FirebaseRealtimeReader:
         if not isinstance(detections, dict):
             detections = {}
         return aggregate_detections(detections, declared_weight_kg=declared_weight_kg)
+
+    async def get_live_summary(self) -> dict[str, Any]:
+        """Current camera state for the live dashboard panel (read-only)."""
+        node = await self._fetch_node()
+        return summarize_live(node)
