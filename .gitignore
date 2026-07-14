@@ -16,6 +16,17 @@ htmlcov/
 .env.*
 !.env.example
 
+# Firebase / Google service-account keys — NEVER commit these.
+# Grants admin access to the project; keep on disk, reference via env var.
+*serviceAccount*.json
+*service-account*.json
+*firebase*admin*.json
+*-adminsdk-*.json
+backend/secrets/
+secrets/
+*.pem
+*-key.json
+
 # ---- Local compose overrides ----
 docker-compose.override.yml
 
