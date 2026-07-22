@@ -2,6 +2,7 @@ import { ImagePlus, Loader2 } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { PhotoThumbnail } from "@/components/requests/PhotoThumbnail";
+import { RequestRouteMap } from "@/components/requests/RequestRouteMap";
 import { RequestStatusBadge } from "@/components/requests/RequestStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -20,6 +21,8 @@ interface RequestDetailDialogProps {
   request: CollectionRequest;
   /** Whether the current user may add/remove photos (hotel owner, non-terminal). */
   canEditPhotos: boolean;
+  /** Show the hotel -> plant map. Operators route the truck; hotels don't. */
+  showMap?: boolean;
   onClose: () => void;
 }
 
@@ -27,6 +30,7 @@ export function RequestDetailDialog({
   open,
   request,
   canEditPhotos,
+  showMap = false,
   onClose,
 }: RequestDetailDialogProps) {
   const toast = useToast();
@@ -115,6 +119,15 @@ export function RequestDetailDialog({
             }
           />
         </div>
+
+        {showMap && (
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">
+              Route{request.hotel ? ` — ${request.hotel.name}` : ""}
+            </h3>
+            <RequestRouteMap request={request} />
+          </div>
+        )}
 
         {request.rejection_reason && (
           <p className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">

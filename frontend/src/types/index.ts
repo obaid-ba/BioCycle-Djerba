@@ -281,9 +281,20 @@ export interface RequestPhoto {
   created_at: string;
 }
 
+/** Minimal hotel identity embedded in a request (enough to place it on a map). */
+export interface RequestHotel {
+  id: string;
+  name: string;
+  city: string;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
 export interface CollectionRequest {
   id: string;
   hotel_id: string;
+  hotel: RequestHotel | null;
   status: RequestStatus;
 
   declared_containers: number;
@@ -313,6 +324,11 @@ export interface CollectionRequest {
 
   created_at: string;
   updated_at: string;
+
+  /** Plant coordinates, served with the request so the map and
+   * `distance_to_plant_km` always agree on the same reference point. */
+  plant_latitude: number;
+  plant_longitude: number;
 }
 
 export interface CollectionRequestCreate {

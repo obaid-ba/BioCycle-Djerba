@@ -23,6 +23,7 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.features.hotels.models import Hotel
 from app.features.requests.state_machine import RequestStatus
 from app.shared.models import Base, TimestampMixin, UUIDMixin
 
@@ -108,6 +109,10 @@ class CollectionRequest(Base, UUIDMixin, TimestampMixin):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
+    # Eager-loaded so the read schema can expose the hotel's name and coordinates
+    # (the operator map needs them to draw the hotel -> plant leg). Read-only
+    # here: requests never mutate the hotel.
+    hotel: Mapped["Hotel"] = relationship(lazy="selectin", viewonly=True)
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<CollectionRequest {self.id} {self.status.value} {self.declared_weight_kg}kg>"
