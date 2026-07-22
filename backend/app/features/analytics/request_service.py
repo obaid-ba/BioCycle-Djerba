@@ -14,6 +14,7 @@ from app.features.analytics.request_repository import RequestAnalyticsRepository
 from app.features.analytics.schemas import (
     HotelRankingRow,
     OperatorRankingRow,
+    PuritySplit,
     RequestStats,
     RequestTimeseriesBucket,
 )
@@ -60,6 +61,18 @@ class RequestAnalyticsService:
             estimated_co2_kg=round(totals["estimated_co2_kg"], 3),
             avg_quality_score=round(avg_q, 1) if avg_q is not None else None,
             acceptance_rate=acceptance_rate,
+        )
+
+    async def purity_split(self, user: User) -> PuritySplit:
+        """Usable organic mass vs contamination across all scored requests."""
+        split = await self.repo.purity_split(manager_id=self._manager_scope(user))
+        organic = split["organic_kg"]
+        total = organic + split["contamination_kg"]
+        return PuritySplit(
+            organic_kg=round(organic, 3),
+            contamination_kg=round(split["contamination_kg"], 3),
+            total_kg=round(total, 3),
+            organic_percentage=round(organic / total * 100, 1) if total > 0 else None,
         )
 
     async def hotel_ranking(self, user: User, limit: int = 10) -> list[HotelRankingRow]:

@@ -1,8 +1,9 @@
 import {
   Bar,
-  BarChart,
   CartesianGrid,
+  ComposedChart,
   Legend,
+  Line,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,10 +19,10 @@ import {
 } from "@/components/ui/card";
 import { useChartColors } from "@/lib/chartColors";
 import { formatKg } from "@/lib/utils";
-import type { TimeseriesBucket, TimeseriesGranularity } from "@/types";
+import type { RequestTimeseriesBucket, TimeseriesGranularity } from "@/types";
 
 interface Props {
-  data?: TimeseriesBucket[];
+  data?: RequestTimeseriesBucket[];
   loading?: boolean;
   granularity: TimeseriesGranularity;
   onGranularityChange: (g: TimeseriesGranularity) => void;
@@ -46,11 +47,14 @@ export function CollectionsTrendChart({
 
   const chartData = (data ?? []).map((b) => ({
     label: formatBucket(b.bucket, granularity),
-    organic: b.organic_kg,
-    nonOrganic: b.non_organic_kg,
+    weight: b.declared_weight_kg,
+    methane: b.estimated_methane_m3,
   }));
 
-  const isEmpty = !loading && chartData.length === 0;
+  // A period with buckets but no activity is still "no data" to a viewer.
+  const isEmpty =
+    !loading &&
+    (chartData.length === 0 || chartData.every((d) => d.weight === 0));
 
   return (
     <Card>
@@ -78,7 +82,7 @@ export function CollectionsTrendChart({
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={chartData} barGap={2}>
+            <ComposedChart data={chartData} barGap={2}>
               <CartesianGrid
                 vertical={false}
                 stroke={colors.grid}
@@ -90,7 +94,18 @@ export function CollectionsTrendChart({
                 tickLine={false}
                 axisLine={{ stroke: colors.grid }}
               />
+              {/* Weight and methane differ by an order of magnitude, so the
+                  methane line gets its own right-hand scale. */}
               <YAxis
+                yAxisId="weight"
+                tick={{ fill: colors.axis, fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                width={52}
+              />
+              <YAxis
+                yAxisId="methane"
+                orientation="right"
                 tick={{ fill: colors.axis, fontSize: 12 }}
                 tickLine={false}
                 axisLine={false}
@@ -98,7 +113,11 @@ export function CollectionsTrendChart({
               />
               <Tooltip
                 cursor={{ fill: "hsl(var(--muted))", opacity: 0.4 }}
-                formatter={(value: number) => formatKg(value)}
+                formatter={(value: number, name: string) =>
+                  name === "Est. methane"
+                    ? `${value.toLocaleString(undefined, { maximumFractionDigits: 0 })} m³`
+                    : formatKg(value)
+                }
                 contentStyle={{
                   background: "hsl(var(--popover))",
                   border: "1px solid hsl(var(--border))",
@@ -109,20 +128,22 @@ export function CollectionsTrendChart({
               />
               <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
               <Bar
-                dataKey="organic"
-                name="Organic"
-                stackId="waste"
+                yAxisId="weight"
+                dataKey="weight"
+                name="Declared waste"
                 fill={colors.organic}
-                radius={[0, 0, 0, 0]}
-              />
-              <Bar
-                dataKey="nonOrganic"
-                name="Non-organic"
-                stackId="waste"
-                fill={colors.nonOrganic}
                 radius={[4, 4, 0, 0]}
               />
-            </BarChart>
+              <Line
+                yAxisId="methane"
+                type="monotone"
+                dataKey="methane"
+                name="Est. methane"
+                stroke={colors.nonOrganic}
+                strokeWidth={2}
+                dot={{ r: 3 }}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         )}
       </CardContent>

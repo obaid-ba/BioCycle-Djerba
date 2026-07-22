@@ -78,3 +78,17 @@ class RequestTimeseriesBucket(BaseSchema):
     count: int
     declared_weight_kg: float
     estimated_methane_m3: float
+
+
+class PuritySplit(BaseSchema):
+    """Declared waste split by AI purity: usable feedstock vs contamination.
+
+    Distinct from the legacy `WasteDistribution` (organic vs non-organic): every
+    declared load here is organic waste, and the meaningful question is how much
+    of it the plant can actually digest.
+    """
+
+    organic_kg: float
+    contamination_kg: float
+    total_kg: float
+    organic_percentage: float | None

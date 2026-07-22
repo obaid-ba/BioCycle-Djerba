@@ -7,7 +7,9 @@ boundary directly (except via `from_attributes` serialization on the read path).
 import uuid
 from datetime import datetime
 
-from pydantic import Field
+from pydantic import Field, computed_field
+
+from app.core.config import settings
 
 from app.features.requests.models import AIStatus
 from app.features.requests.state_machine import RequestStatus
@@ -91,9 +93,26 @@ class RequestPhotoRead(BaseSchema):
     created_at: datetime
 
 
+class RequestHotelRead(BaseSchema):
+    """Minimal hotel identity embedded in a request.
+
+    Enough for the operator to see *who* filed the request and to place it on the
+    map (hotel -> plant leg) without a second round-trip to /hotels — which
+    operators are not necessarily authorized to list.
+    """
+
+    id: uuid.UUID
+    name: str
+    city: str
+    address: str | None
+    latitude: float | None
+    longitude: float | None
+
+
 class CollectionRequestRead(BaseSchema):
     id: uuid.UUID
     hotel_id: uuid.UUID
+    hotel: RequestHotelRead | None
     status: RequestStatus
 
     declared_containers: int
@@ -123,3 +142,15 @@ class CollectionRequestRead(BaseSchema):
 
     created_at: datetime
     updated_at: datetime
+
+    @computed_field
+    @property
+    def plant_latitude(self) -> float:
+        """Plant coordinates travel with the request so the operator map draws the
+        same hotel -> plant leg that `distance_to_plant_km` was computed from."""
+        return settings.PLANT_LATITUDE
+
+    @computed_field
+    @property
+    def plant_longitude(self) -> float:
+        return settings.PLANT_LONGITUDE

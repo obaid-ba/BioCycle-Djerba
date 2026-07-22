@@ -4,7 +4,9 @@ import {
   getDashboardStats,
   getHotelRanking,
   getOperatorRanking,
+  getPuritySplit,
   getRequestStats,
+  getRequestsTimeseries,
   getTimeseries,
   getWasteDistribution,
 } from "@/services/analytics";
@@ -30,6 +32,22 @@ export function useTimeseries(granularity: TimeseriesGranularity) {
   return useQuery({
     queryKey: ["analytics", "timeseries", granularity],
     queryFn: () => getTimeseries(granularity),
+  });
+}
+
+/** Feedstock quality split, derived from AI purity scores. */
+export function usePuritySplit() {
+  return useQuery({
+    queryKey: ["analytics", "purity-split"],
+    queryFn: getPuritySplit,
+  });
+}
+
+/** Request-based trend — replaces the legacy waste_collections timeseries. */
+export function useRequestsTimeseries(granularity: TimeseriesGranularity) {
+  return useQuery({
+    queryKey: ["analytics", "requests-timeseries", granularity],
+    queryFn: () => getRequestsTimeseries(granularity),
   });
 }
 

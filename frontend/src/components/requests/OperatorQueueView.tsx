@@ -49,8 +49,9 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
   });
 
   const requests = query.data?.items ?? [];
-  const colSpan = readOnly ? 8 : 9;
-  // Columns: Priority, Quality, Distance, Created, Declared, Purity, Methane, Status (+Actions)
+  const colSpan = readOnly ? 9 : 10;
+  // Columns: Priority, Quality, Hotel, Distance, Created, Declared, Purity,
+  // Methane, Status (+Actions)
 
   return (
     <div className="space-y-6">
@@ -80,6 +81,7 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
             <TableRow>
               <TableHead>Priority</TableHead>
               <TableHead>Quality</TableHead>
+              <TableHead>Hotel</TableHead>
               <TableHead>Distance</TableHead>
               <TableHead>Created</TableHead>
               <TableHead>Declared</TableHead>
@@ -113,6 +115,14 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.ai_quality_score != null ? r.ai_quality_score.toFixed(0) : "—"}
+                  </TableCell>
+                  <TableCell>
+                    <div className="font-medium">{r.hotel?.name ?? "—"}</div>
+                    {r.hotel?.city && (
+                      <div className="text-xs text-muted-foreground">
+                        {r.hotel.city}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell className="tabular-nums">
                     {r.distance_to_plant_km != null
@@ -178,6 +188,7 @@ export function OperatorQueueView({ readOnly = false }: { readOnly?: boolean }) 
           open={!!selected}
           request={selected}
           canEditPhotos={false}
+          showMap
           onClose={() => setSelected(null)}
         />
       )}

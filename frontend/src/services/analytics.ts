@@ -3,7 +3,9 @@ import type {
   DashboardStats,
   HotelRankingRow,
   OperatorRankingRow,
+  PuritySplit,
   RequestStats,
+  RequestTimeseriesBucket,
   TimeseriesBucket,
   TimeseriesGranularity,
   WasteDistribution,
@@ -38,6 +40,23 @@ export async function getTimeseries(
 /** GET /dashboard/request-stats — KPIs derived from collection requests. */
 export async function getRequestStats(): Promise<RequestStats> {
   const { data } = await api.get<RequestStats>("/dashboard/request-stats");
+  return data;
+}
+
+/** GET /analytics/purity-split — digestible feedstock vs contamination. */
+export async function getPuritySplit(): Promise<PuritySplit> {
+  const { data } = await api.get<PuritySplit>("/analytics/purity-split");
+  return data;
+}
+
+/** GET /analytics/requests-timeseries — bucketed request weight / methane. */
+export async function getRequestsTimeseries(
+  granularity: TimeseriesGranularity,
+): Promise<RequestTimeseriesBucket[]> {
+  const { data } = await api.get<RequestTimeseriesBucket[]>(
+    "/analytics/requests-timeseries",
+    { params: { granularity } },
+  );
   return data;
 }
 

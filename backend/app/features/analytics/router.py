@@ -12,6 +12,7 @@ from app.features.analytics.schemas import (
     DashboardStats,
     HotelRankingRow,
     OperatorRankingRow,
+    PuritySplit,
     RequestStats,
     RequestTimeseriesBucket,
     TimeseriesBucket,
@@ -79,6 +80,15 @@ async def timeseries(
     return await AnalyticsService(db).timeseries(
         current_user, granularity=granularity, date_from=date_from, date_to=date_to
     )
+
+
+@analytics_router.get(
+    "/purity-split",
+    response_model=PuritySplit,
+    summary="Usable organic mass vs contamination (from AI purity scores)",
+)
+async def purity_split(current_user: CurrentUser, db: DbSession) -> PuritySplit:
+    return await RequestAnalyticsService(db).purity_split(current_user)
 
 
 @analytics_router.get(

@@ -102,8 +102,8 @@ class Settings(BaseSettings):
     # Used as the fixed reference point for the operator-queue distance tiebreak
     # (hotel -> plant, straight-line/haversine). Approximate Djerba coordinates;
     # override with the real site position via env.
-    PLANT_LATITUDE: float = 33.8076
-    PLANT_LONGITUDE: float = 10.8451
+    PLANT_LATITUDE: float = 33.68
+    PLANT_LONGITUDE: float = 10.91
 
     @computed_field
     @property

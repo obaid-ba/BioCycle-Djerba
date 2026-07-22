@@ -9,10 +9,10 @@ import {
 } from "@/components/ui/card";
 import { useChartColors } from "@/lib/chartColors";
 import { formatKg } from "@/lib/utils";
-import type { WasteDistribution } from "@/types";
+import type { PuritySplit } from "@/types";
 
 interface Props {
-  data?: WasteDistribution;
+  data?: PuritySplit;
   loading?: boolean;
 }
 
@@ -21,10 +21,10 @@ export function WasteDistributionChart({ data, loading }: Props) {
 
   const slices = data
     ? [
-        { name: "Organic", value: data.organic_kg, fill: colors.organic },
+        { name: "Usable feedstock", value: data.organic_kg, fill: colors.organic },
         {
-          name: "Non-organic",
-          value: data.non_organic_kg,
+          name: "Contamination",
+          value: data.contamination_kg,
           fill: colors.nonOrganic,
         },
       ]
@@ -35,11 +35,11 @@ export function WasteDistributionChart({ data, loading }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Waste distribution</CardTitle>
+        <CardTitle>Feedstock quality</CardTitle>
         <CardDescription>
-          Organic vs non-organic by weight
+          Digestible mass vs contamination, from AI purity scores
           {data?.organic_percentage != null &&
-            ` · ${data.organic_percentage.toFixed(0)}% organic`}
+            ` · ${data.organic_percentage.toFixed(0)}% usable`}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -47,7 +47,7 @@ export function WasteDistributionChart({ data, loading }: Props) {
           <div className="mx-auto h-56 w-56 animate-pulse rounded-full bg-muted" />
         ) : isEmpty ? (
           <p className="py-20 text-center text-sm text-muted-foreground">
-            No collections recorded yet.
+            No scored requests yet.
           </p>
         ) : (
           <ResponsiveContainer width="100%" height={240}>

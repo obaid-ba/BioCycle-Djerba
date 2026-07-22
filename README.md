@@ -49,3 +49,7 @@ docker compose up --build
 
 Built feature-by-feature. See the roadmap in the project notes. Current phase:
 **Phase 0 — Foundation** (runnable skeleton, health check, tooling).
+
+## License
+
+[MIT](LICENSE) © 2026 Obaid Allah Ben Ali
