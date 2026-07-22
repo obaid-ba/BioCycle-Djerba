@@ -383,6 +383,14 @@ export interface RequestTimeseriesBucket {
   estimated_methane_m3: number;
 }
 
+/** Declared waste split by AI purity: digestible feedstock vs contamination. */
+export interface PuritySplit {
+  organic_kg: number;
+  contamination_kg: number;
+  total_kg: number;
+  organic_percentage: number | null;
+}
+
 // ---- Notifications ----
 export type NotificationType =
   | "request_accepted"

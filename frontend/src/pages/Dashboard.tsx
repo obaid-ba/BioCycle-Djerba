@@ -24,9 +24,9 @@ import { useAuth } from "@/context/auth";
 import { useHasRole } from "@/hooks/useHasRole";
 import {
   useDashboardStats,
+  usePuritySplit,
   useRequestStats,
-  useTimeseries,
-  useWasteDistribution,
+  useRequestsTimeseries,
 } from "@/hooks/useDashboard";
 import { formatKg } from "@/lib/utils";
 import type { TimeseriesGranularity } from "@/types";
@@ -48,8 +48,10 @@ function AdminDashboard() {
   const reqStats = useRequestStats();
   // System status still comes from the legacy dashboard stats endpoint.
   const stats = useDashboardStats();
-  const distribution = useWasteDistribution();
-  const timeseries = useTimeseries(granularity);
+  // Both charts read the request/AI data — the legacy waste_collections
+  // endpoints they used before the pivot return only zeros.
+  const distribution = usePuritySplit();
+  const timeseries = useRequestsTimeseries(granularity);
 
   const rs = reqStats.data;
   const kwh = (v: number) =>

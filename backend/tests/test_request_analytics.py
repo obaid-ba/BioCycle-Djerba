@@ -130,3 +130,39 @@ async def test_manager_stats_scoped_to_own_hotel(
 async def test_request_stats_requires_auth(client: AsyncClient) -> None:
     resp = await client.get("/api/dashboard/request-stats")
     assert resp.status_code == 401
+
+
+async def test_purity_split_uses_ai_scores(
+    client: AsyncClient, make_user: Callable, make_hotel: Callable, login: Callable,
+    auth_headers: Callable,
+) -> None:
+    """The feedstock pie is derived from AI purity, not the dead waste table."""
+    headers, _ = await _manager_with_requests(client, make_user, make_hotel, login, auth_headers)
+
+    resp = await client.get("/api/analytics/purity-split", headers=headers)
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    # Real scored data: both slices non-zero and summing to the declared total.
+    assert body["organic_kg"] > 0
+    assert body["contamination_kg"] > 0
+    assert body["total_kg"] == round(body["organic_kg"] + body["contamination_kg"], 3)
+    assert 0 < body["organic_percentage"] <= 100
+
+
+async def test_purity_split_empty_when_nothing_scored(
+    client: AsyncClient, auth_headers: Callable,
+) -> None:
+    """No requests => an honest empty split, not a fabricated one."""
+    op = await auth_headers(UserRole.OPERATOR)
+
+    resp = await client.get("/api/analytics/purity-split", headers=op)
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body == {
+        "organic_kg": 0.0,
+        "contamination_kg": 0.0,
+        "total_kg": 0.0,
+        "organic_percentage": None,
+    }

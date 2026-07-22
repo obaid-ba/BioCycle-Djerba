@@ -73,6 +73,30 @@ class RequestAnalyticsRepository:
             "avg_quality_score": float(avg_quality) if avg_quality is not None else None,
         }
 
+    async def purity_split(
+        self, *, manager_id: uuid.UUID | None
+    ) -> dict[str, float]:
+        """Declared weight split into usable organic mass vs contamination.
+
+        The AI reports `ai_organic_purity` as a percentage of each load; the
+        usable mass is weight × purity, and the rest is contamination. Only rows
+        the AI actually scored are included — an unscored request has no known
+        split, and assuming one would invent data.
+        """
+        purity_fraction = CollectionRequest.ai_organic_purity / 100.0
+        stmt = select(
+            func.coalesce(
+                func.sum(CollectionRequest.declared_weight_kg * purity_fraction), 0.0
+            ),
+            func.coalesce(
+                func.sum(CollectionRequest.declared_weight_kg * (1 - purity_fraction)),
+                0.0,
+            ),
+        ).where(CollectionRequest.ai_organic_purity.is_not(None))
+        stmt = self._scoped(stmt, manager_id)
+        organic, contamination = (await self.db.execute(stmt)).one()
+        return {"organic_kg": float(organic), "contamination_kg": float(contamination)}
+
     async def hotel_ranking(
         self, *, manager_id: uuid.UUID | None, limit: int = 10
     ) -> Sequence[tuple]:
